@@ -1,0 +1,3391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Similarity Network</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+            background: #0a0a0f;
+            color: #fafafa;
+            overflow: hidden;
+            font-size: 13px;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+        
+        #sidebar {
+            width: 300px;
+            min-width: 300px;
+            max-width: 300px;
+            background: #111116;
+            padding: 24px;
+            padding-right: 12px;
+            overflow-y: scroll;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            flex-shrink: 0;
+        }
+        
+        #sidebar::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            border: 3px solid #111116;
+        }
+        
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        h1 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #fafafa;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            font-size: 11px;
+            font-weight: 400;
+            color: #71717a;
+            margin-bottom: 28px;
+            letter-spacing: 0.02em;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+        }
+        
+        .slider-container {
+            position: relative;
+            padding-bottom: 14px;
+        }
+        
+        .slider-tick {
+            position: absolute;
+            bottom: 0;
+            width: 1px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.4);
+            transform: translateX(-50%);
+        }
+        
+        .slider-detent {
+            position: absolute;
+            bottom: 0;
+            width: 2px;
+            height: 10px;
+            transform: translateX(-50%);
+            border-radius: 1px;
+        }
+        
+        .h0-detent {
+            background: #4ecca3;
+        }
+        
+        .h1-detent {
+            background: #e94560;
+        }
+        
+        .homology-tag {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .h0-tag {
+            background: rgba(78, 204, 163, 0.15);
+            color: #4ecca3;
+            border: 1px solid rgba(78, 204, 163, 0.3);
+        }
+        
+        .h1-tag {
+            background: rgba(233, 69, 96, 0.15);
+            color: #e94560;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+        }
+        
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: #71717a;
+            margin-bottom: 8px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 0;
+            margin-bottom: 6px;
+            accent-color: #a855f7;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+        
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            border: none;
+        }
+        
+        select {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 12px;
+            font-weight: 400;
+            background: #18181b;
+            color: #fafafa;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            width: 100%;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        
+        select:hover {
+            border-color: rgba(255,255,255,0.2);
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+        
+        .value-display {
+            font-size: 12px;
+            font-weight: 500;
+            color: #a855f7;
+            margin-top: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .threshold-info {
+            margin-bottom: 16px;
+        }
+        
+        .info-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 500;
+            color: #22c55e;
+            background: rgba(34,197,94,0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        
+        .info-text {
+            font-size: 11px;
+            color: #71717a;
+            line-height: 1.5;
+        }
+        
+        .method-explainer {
+            margin-top: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .method-explainer details {
+            background: rgba(168, 85, 247, 0.08);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 8px;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .method-explainer summary {
+            font-size: 11px;
+            font-weight: 500;
+            color: #a855f7;
+            cursor: pointer;
+            padding: 8px 12px;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .method-explainer summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        .method-explainer summary::before {
+            content: '▶';
+            font-size: 8px;
+            transition: transform 0.2s ease;
+        }
+        
+        .method-explainer details[open] summary::before {
+            transform: rotate(90deg);
+        }
+        
+        .method-explainer p {
+            font-size: 11px;
+            color: #a1a1aa;
+            line-height: 1.6;
+            padding: 0 12px 12px 12px;
+            margin: 0;
+        }
+        
+        .stats {
+            background: #18181b;
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        
+        .stats h3 {
+            font-size: 11px;
+            font-weight: 500;
+            color: #71717a;
+            margin-bottom: 12px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-value {
+            color: #22c55e;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        #community-list {
+            margin-top: 20px;
+        }
+        
+        #community-list h3 {
+            font-size: 11px;
+            font-weight: 500;
+            color: #71717a;
+            margin-bottom: 12px;
+        }
+        
+        .community-item {
+            background: #18181b;
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+        
+        .community-item:hover {
+            background: #27272a;
+            border-color: rgba(255,255,255,0.08);
+        }
+        
+        .community-item.active {
+            border-color: #a855f7;
+            background: rgba(168,85,247,0.1);
+        }
+        
+        .community-name {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            color: #fafafa;
+        }
+        
+        .community-meta {
+            font-size: 11px;
+            font-weight: 400;
+            color: #71717a;
+        }
+        
+        #graph-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #graph .links line {
+            pointer-events: none;
+            shape-rendering: optimizeSpeed;
+        }
+        
+        #graph .nodes circle {
+            shape-rendering: optimizeSpeed;
+        }
+        
+        .tooltip {
+            position: fixed;
+            top: 104px;
+            left: calc(300px + (100vw - 300px) / 2);
+            transform: translateX(-50%);
+            background: #18181b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px 32px;
+            padding-right: 20px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            text-align: center;
+            width: 320px;
+            max-height: calc(100vh - 180px);
+            overflow-y: scroll;
+        }
+        
+        .tooltip::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .tooltip::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .tooltip::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            border: 3px solid #18181b;
+        }
+        
+        .tooltip::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .tooltip.visible {
+            opacity: 1;
+        }
+        
+        .tooltip.entity-view {
+            left: calc(300px + 20px);
+            top: 84px;
+            transform: none;
+        }
+        
+        .tooltip.pinned {
+            pointer-events: auto;
+        }
+        
+        .tooltip h4 {
+            color: #fafafa;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .tooltip-row {
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #a1a1aa;
+        }
+        
+        .tooltip-label {
+            color: #71717a;
+        }
+        
+        .tooltip-entities {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        
+        #search-results::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        #search-results::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        #search-results::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            border: 3px solid rgba(24, 24, 27, 0.95);
+        }
+        
+        #search-results::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .entity-tag {
+            display: inline-block;
+            background: rgba(168,85,247,0.15);
+            color: #c4b5fd;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .role-tag {
+            display: inline-block;
+            background: rgba(34,197,94,0.15);
+            color: #86efac;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        #detail-panel {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            width: 340px;
+            background: #111116;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        
+        #detail-panel::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        #detail-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        #detail-panel::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            border: 3px solid #111116;
+        }
+        
+        #detail-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        #detail-panel.visible {
+            display: block;
+        }
+        
+        #detail-panel h3 {
+            color: #fafafa;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        #detail-panel .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: #71717a;
+            font-size: 18px;
+            cursor: pointer;
+            transition: color 0.15s;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+        
+        #detail-panel .close-btn:hover {
+            color: #fafafa;
+            background: rgba(255,255,255,0.06);
+        }
+        
+        .summary-opener {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05));
+            border-left: 3px solid #a855f7;
+            padding: 12px 14px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 12px;
+        }
+        
+        .summary-opener p {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #e4e4e7;
+            margin: 0;
+            font-style: italic;
+        }
+        
+        .word-count-badge {
+            display: inline-block;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            font-size: 10px;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .known-relationships {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        
+        .relationship-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .relationship-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .rel-source, .rel-target {
+            color: #e4e4e7;
+            font-weight: 500;
+        }
+        
+        .rel-type {
+            color: #22c55e;
+            font-size: 10px;
+            background: rgba(34, 197, 94, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .preview-text {
+            background: #18181b;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            line-height: 1.6;
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 12px;
+            color: #a1a1aa;
+            border: 1px solid rgba(255,255,255,0.04);
+            white-space: pre-wrap;
+        }
+        
+        .preview-text::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .preview-text::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .preview-text::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            border: 3px solid #18181b;
+        }
+        
+        .preview-text::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .detail-section {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        
+        .detail-section summary {
+            font-size: 12px;
+            font-weight: 500;
+            color: #a855f7;
+            cursor: pointer;
+            padding: 10px 12px;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(168, 85, 247, 0.08);
+            transition: background 0.15s;
+        }
+        
+        .detail-section summary:hover {
+            background: rgba(168, 85, 247, 0.12);
+        }
+        
+        .detail-section summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        .detail-section summary::before {
+            content: '▶';
+            font-size: 8px;
+            transition: transform 0.2s;
+        }
+        
+        .detail-section[open] summary::before {
+            transform: rotate(90deg);
+        }
+        
+        .detail-section .section-content {
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .detail-section.green-section summary {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.08);
+        }
+        
+        .detail-section.green-section summary:hover {
+            background: rgba(34, 197, 94, 0.12);
+        }
+        
+        .detail-section .known-relationships {
+            margin-top: 0;
+            border: none;
+            padding: 0;
+            background: transparent;
+        }
+        
+        /* Entity overlay styles */
+        .entity-node {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .entity-node:hover {
+            opacity: 1 !important;
+        }
+        
+        .entity-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 400;
+            fill: #fafafa;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        
+        .entity-link {
+            stroke-dasharray: 3, 3;
+            animation: dash 20s linear infinite;
+        }
+        
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.1; }
+        }
+        
+        .edge-label-twinkle {
+            animation: twinkle 10s ease-in-out infinite;
+        }
+        
+        .overlay-info {
+            position: fixed;
+            top: 72px;
+            left: calc(300px + (100vw - 300px) / 2);
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #71717a;
+            line-height: 1.4;
+            z-index: 99;
+        }
+        
+        .zoom-fit-btn {
+            position: fixed;
+            bottom: 24px;
+            left: calc(300px + (100vw - 300px) / 2);
+            transform: translateX(-50%);
+            background: #18181b;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #fafafa;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.15s;
+        }
+        
+        .zoom-fit-btn::after {
+            content: 'ZOOM TO FIT';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #71717a;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.15s;
+            pointer-events: none;
+        }
+        
+        .zoom-fit-btn:hover::after {
+            opacity: 1;
+        }
+        
+        .zoom-fit-btn:hover {
+            background: #27272a;
+            border-color: rgba(255,255,255,0.25);
+        }
+        
+        .zoom-fit-btn:active {
+            transform: translateX(-50%) scale(0.98);
+        }
+        
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #111116;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 14px 16px;
+            width: 300px;
+            max-height: calc(100vh - 60px);
+            overflow-y: scroll;
+        }
+        
+        .legend::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .legend::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .legend::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            border: 3px solid #111116;
+        }
+        
+        .legend::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .legend h4 {
+            font-size: 11px;
+            font-weight: 500;
+            color: #71717a;
+            margin-bottom: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: flex-start;
+            font-size: 11px;
+            font-weight: 400;
+            color: #a1a1aa;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        
+        .legend-item:hover {
+            color: #fff;
+        }
+        
+        .legend-item span {
+            flex: 1;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2em;
+            color: #e94560;
+        }
+        
+        #graph {
+            will-change: transform;
+        }
+        
+        .links line {
+            shape-rendering: optimizeSpeed;
+        }
+        
+        .nodes circle {
+            shape-rendering: optimizeSpeed;
+        }
+
+        /* Size legend */
+        .size-legend {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #0f3460;
+        }
+        
+        .size-legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .size-circle {
+            border: 1.5px solid #a855f7;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="sidebar">
+            <h1>DOCUMENT SIMILARITY AND ENTITY NETWORKS</h1>
+            <p class="subtitle">Epstein-Maxwell Files Analysis</p>
+            
+            <div class="controls">
+                <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                    <button id="view-entity-network" style="width: 100%; padding: 10px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05)); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; color: #22c55e; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;">
+                        View Entity Network
+                    </button>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label for="threshold-slider" style="margin-bottom: 0;">Similarity Threshold</label>
+                    <div id="homology-tags" style="display: flex; gap: 6px; min-width: 72px; justify-content: flex-end;">
+                        <span id="h0-tag" class="homology-tag h0-tag" style="visibility: hidden;">H₀ Optimal</span>
+                        <span id="h1-tag" class="homology-tag h1-tag" style="visibility: hidden;">H₁ Optimal</span>
+                    </div>
+                </div>
+                <div class="slider-container" id="slider-container" style="margin-top: 8px;">
+                    <input type="range" id="threshold-slider" min="0.2" max="0.95" step="0.05" value="0.35">
+                </div>
+                <div class="value-display">Threshold: <span id="threshold-value">0.35</span></div>
+                <div class="threshold-info" id="threshold-info">
+                    <div class="info-badge">Loading...</div>
+                </div>
+                
+                <div class="method-explainer" id="persistent-homology-box">
+                    <details>
+                        <summary>About Persistent Homology</summary>
+                        <p>Persistent homology tracks how topological features—connected components (H₀) and cycles/loops (H₁)—appear and disappear as the similarity threshold changes. Features that persist across a wide range of thresholds represent robust structure in the data, while short-lived features are likely noise. The optimal threshold is found where stable clusters (H₀) and meaningful loops (H₁) are most prominent.</p>
+                    </details>
+                </div>
+                
+                <label for="node-size" style="margin-top: 16px;">Node Size By</label>
+                <select id="node-size">
+                    <option value="degree">Degree Centrality</option>
+                    <option value="betweenness" selected>Betweenness Centrality</option>
+                    <option value="eigenvector">Eigenvector Centrality</option>
+                    <option value="community_size">Community Size</option>
+                </select>
+                
+                <label for="temporal-filter" style="margin-top: 16px;">Temporal Period</label>
+                <select id="temporal-filter">
+                    <option value="all">All Periods (1990–2025)</option>
+                </select>
+                <div class="period-info" id="period-info" style="font-size: 11px; color: #71717a; margin-top: 4px;"></div>
+            </div>
+            
+            <div class="stats" id="stats">
+                <h3>Network Statistics</h3>
+                <div class="stat-row">
+                    <span>Nodes</span>
+                    <span class="stat-value" id="stat-nodes">-</span>
+                </div>
+                <div class="stat-row">
+                    <span>Edges</span>
+                    <span class="stat-value" id="stat-edges">-</span>
+                </div>
+                <div class="stat-row">
+                    <span id="stat-communities-label">Communities</span>
+                    <span class="stat-value" id="stat-communities">-</span>
+                </div>
+                <div class="stat-row" id="stat-sources-row" style="display: none;">
+                    <span>📚 Sources</span>
+                    <span class="stat-value" id="stat-sources">-</span>
+                </div>
+            </div>
+            
+            <div id="community-list">
+                <h3 class="collapsible-header" id="communities-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+                    <span>Communities</span>
+                    <span class="collapse-icon" style="font-size: 10px; transition: transform 0.2s;">▶</span>
+                </h3>
+                <div id="communities" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div id="graph-container">
+            <div class="loading" id="loading">Loading network data...</div>
+            <svg id="graph"></svg>
+            <div class="search-container" id="search-container" style="position: fixed; top: 16px; left: calc(300px + (100vw - 300px) / 2); transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; align-items: center;">
+                <input type="text" id="search-input" placeholder="Search EFTA ID, entity, or term..." style="width: 320px; padding: 10px 16px; background: rgba(24, 24, 27, 0.95); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fafafa; font-size: 13px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: center;">
+                <div id="search-results" style="width: 320px; max-height: 200px; overflow-y: auto; margin-top: 4px; background: rgba(24, 24, 27, 0.95); border-radius: 8px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
+            </div>
+            <div class="overlay-info" id="overlay-info"><span id="step-focus" style="font-weight: bold; color: #fafafa;">Click node to focus</span><span id="step-arrow1"> → </span><span id="step-overlay">click again for entity overlay</span><span id="step-arrow2"> → </span><span id="step-reset">click node again to reset</span></div>
+            <div class="tooltip" id="tooltip"></div>
+            <button class="zoom-fit-btn" id="zoom-fit-btn">⛶</button>
+            <div id="detail-panel">
+                <button class="close-btn" onclick="closeDetailPanel()">&times;</button>
+                <h3 id="detail-title">Document Details</h3>
+                <div id="detail-content"></div>
+            </div>
+            <div class="legend" id="legend">
+                <h4>Communities</h4>
+                <div id="legend-items"></div>
+                <div class="size-legend" id="size-legend">
+                    <h4 style="font-size: 0.85em; margin-bottom: 8px;">Node Size</h4>
+                    <div id="size-legend-items"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Color palette for communities
+        const communityColors = d3.scaleOrdinal([
+            '#e94560', '#4ecca3', '#ffd369', '#6c5ce7', '#00cec9',
+            '#fd79a8', '#fdcb6e', '#74b9ff', '#a29bfe', '#55efc4',
+            '#fab1a0', '#81ecec', '#dfe6e9', '#ff7675', '#636e72',
+            '#b2bec3', '#00b894', '#e17055', '#0984e3', '#d63031'
+        ]);
+        
+        // Entity type colors
+        const entityColors = {
+            person: '#22c55e',
+            company: '#f59e0b',
+            organization: '#3b82f6',
+            default: '#a855f7'
+        };
+        
+        let simulation;
+        let currentData = null;
+        let selectedCommunity = null;
+        let availableThresholds = [];
+        let optimalThreshold = 0.35;
+        let thresholdReason = '';
+        let h0Threshold = null;
+        let h1Threshold = null;
+        let persistenceData = null;
+        let entityOverlayData = null;
+        let selectedDocNode = null;
+        let nodeClickState = 0;  // 0: none, 1: focused, 2: overlay
+        let entityNetworkData = null;  // Store entity network data for search
+        let svgGroup = null;  // Store reference to the main SVG group
+        let temporalPeriods = [];  // Store temporal periods
+        let currentPeriod = 'all';  // Current selected period
+        let periodDocuments = null;  // Documents in current period
+        let viewMode = 'document';  // 'document' or 'entity'
+        
+        // Static data configuration
+        const STATIC_DATA_BASE = './data';
+        const CHUNK_SIZE = 100;
+        
+        // Cache for loaded chunks
+        const documentCache = {};
+        const overlayCache = {};
+        let entityMentionsIndex = null;  // Maps entity_id -> list of EFTA IDs
+        
+        // Helper to get chunk number from EFTA ID
+        function getChunkKey(eftaId) {
+            const num = parseInt(eftaId.replace('EFTA', ''));
+            const chunkNum = Math.floor((num - 1) / CHUNK_SIZE) + 1;
+            return String(chunkNum).padStart(4, '0');
+        }
+        
+        // Load entity mentions index (called once at startup)
+        async function loadEntityMentionsIndex() {
+            if (entityMentionsIndex) return entityMentionsIndex;
+            try {
+                const response = await fetch(`${STATIC_DATA_BASE}/entity-mentions-index.json`);
+                if (response.ok) {
+                    entityMentionsIndex = await response.json();
+                } else {
+                    entityMentionsIndex = {};
+                }
+            } catch (e) {
+                entityMentionsIndex = {};
+            }
+            return entityMentionsIndex;
+        }
+        
+        // Compute shared documents for an overlay using the index
+        function computeSharedDocuments(entities, currentEftaId) {
+            if (!entityMentionsIndex) return [];
+            
+            const sharedDocs = {};
+            entities.forEach(entity => {
+                const docs = entityMentionsIndex[entity.entity_id] || [];
+                docs.forEach(eftaId => {
+                    if (eftaId !== currentEftaId) {
+                        if (!sharedDocs[eftaId]) {
+                            sharedDocs[eftaId] = [];
+                        }
+                        sharedDocs[eftaId].push({
+                            entity_id: entity.entity_id,
+                            entity_name: entity.entity_name
+                        });
+                    }
+                });
+            });
+            
+            return Object.entries(sharedDocs).map(([eftaId, ents]) => ({
+                file_path: eftaId,  // Just use EFTA ID as file_path for lookup
+                shared_entities: ents
+            }));
+        }
+        
+        // Load document details with caching
+        async function loadDocumentFromStatic(eftaId) {
+            const chunkKey = getChunkKey(eftaId);
+            if (!documentCache[chunkKey]) {
+                const response = await fetch(`${STATIC_DATA_BASE}/documents/docs_${chunkKey}.json`);
+                if (response.ok) {
+                    documentCache[chunkKey] = await response.json();
+                } else {
+                    documentCache[chunkKey] = {};
+                }
+            }
+            return documentCache[chunkKey][eftaId] || null;
+        }
+        
+        // Load entity overlay with caching
+        async function loadOverlayFromStatic(eftaId) {
+            const chunkKey = getChunkKey(eftaId);
+            if (!overlayCache[chunkKey]) {
+                const response = await fetch(`${STATIC_DATA_BASE}/overlays/overlays_${chunkKey}.json`);
+                if (response.ok) {
+                    overlayCache[chunkKey] = await response.json();
+                } else {
+                    overlayCache[chunkKey] = {};
+                }
+            }
+            return overlayCache[chunkKey][eftaId] || null;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load entity mentions index for shared documents computation
+            await loadEntityMentionsIndex();
+            
+            // First load available thresholds
+            await loadThresholds();
+            
+            // Load temporal periods
+            await loadTemporalPeriods();
+            
+            // Set slider to optimal threshold
+            const slider = document.getElementById('threshold-slider');
+            slider.value = optimalThreshold;
+            document.getElementById('threshold-value').textContent = optimalThreshold.toFixed(2);
+            updateThresholdInfo(optimalThreshold);
+            updateHomologyTags(optimalThreshold);
+            
+            // Then load network at optimal threshold
+            loadNetwork(optimalThreshold);
+            
+            slider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('threshold-value').textContent = value.toFixed(2);
+                updateThresholdInfo(value);
+                updateHomologyTags(value);
+            });
+            
+            slider.addEventListener('change', (e) => {
+                const value = parseFloat(e.target.value);
+                loadNetwork(value);
+            });
+            
+            document.getElementById('node-size').addEventListener('change', () => {
+                if (currentData) updateNodeSizes();
+                // Update legend if in entity view
+                if (viewMode === 'entity') updateEntityLegend();
+            });
+            
+            // Temporal filter change handler
+            document.getElementById('temporal-filter').addEventListener('change', async (e) => {
+                currentPeriod = e.target.value;
+                const period = temporalPeriods.find(p => p.id === currentPeriod);
+                if (period) {
+                    document.getElementById('period-info').textContent = period.description;
+                }
+                // Reload with period filter
+                const threshold = parseFloat(document.getElementById('threshold-slider').value);
+                await loadPeriodDocuments(currentPeriod, threshold);
+                applyTemporalFilter();
+            });
+            
+            // Search input handler
+            const searchInput = document.getElementById('search-input');
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    performSearch(e.target.value);
+                }, 300);
+            });
+            
+            // Entity network button handler
+            document.getElementById('view-entity-network').addEventListener('click', () => {
+                if (viewMode === 'document') {
+                    viewMode = 'entity';
+                    document.getElementById('view-entity-network').textContent = 'View Document Network';
+                    document.getElementById('view-entity-network').style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05))';
+                    document.getElementById('view-entity-network').style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                    document.getElementById('view-entity-network').style.color = '#a855f7';
+                    document.getElementById('search-input').placeholder = 'Search person or entity...';
+                    document.getElementById('tooltip').classList.add('entity-view');
+                    setDocumentControlsEnabled(false);
+                    closeDetailPanel();
+                    updateOverlaySteps(0);
+                    loadEntityNetwork();
+                } else {
+                    viewMode = 'document';
+                    document.getElementById('view-entity-network').textContent = 'View Entity Network';
+                    document.getElementById('view-entity-network').style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))';
+                    document.getElementById('view-entity-network').style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                    document.getElementById('view-entity-network').style.color = '#22c55e';
+                    document.getElementById('search-input').placeholder = 'Search EFTA ID, entity, or term...';
+                    document.getElementById('tooltip').classList.remove('entity-view');
+                    setDocumentControlsEnabled(true);
+                    // Hide sources row for document network
+                    const sourcesRow = document.getElementById('stat-sources-row');
+                    if (sourcesRow) sourcesRow.style.display = 'none';
+                    const threshold = parseFloat(document.getElementById('threshold-slider').value);
+                    loadNetwork(threshold);
+                }
+            });
+            
+            // Communities collapsible toggle
+            document.getElementById('communities-header').addEventListener('click', () => {
+                const content = document.getElementById('communities');
+                const icon = document.querySelector('#communities-header .collapse-icon');
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    icon.style.transform = 'rotate(90deg)';
+                } else {
+                    content.style.display = 'none';
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            });
+        });
+        
+        // Enable/disable document-specific sidebar controls
+        function setDocumentControlsEnabled(enabled) {
+            const controls = [
+                'threshold-slider',
+                'temporal-filter'
+            ];
+            const sections = [
+                'community-list'
+            ];
+            
+            controls.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = !enabled;
+                    el.style.opacity = enabled ? '1' : '0.4';
+                    el.style.pointerEvents = enabled ? 'auto' : 'none';
+                }
+                // Also grey out the label
+                const label = document.querySelector(`label[for="${id}"]`);
+                if (label) {
+                    label.style.opacity = enabled ? '1' : '0.4';
+                }
+            });
+            
+            // Grey out threshold value display (entire line including "Threshold:" text)
+            const valueDisplay = document.querySelector('.value-display');
+            if (valueDisplay) {
+                valueDisplay.style.opacity = enabled ? '1' : '0.4';
+            }
+            
+            // Grey out slider detent markers
+            const sliderContainer = document.getElementById('slider-container');
+            if (sliderContainer) {
+                sliderContainer.querySelectorAll('.slider-detent').forEach(d => {
+                    d.style.opacity = enabled ? '1' : '0.4';
+                });
+            }
+            
+            // Grey out period info
+            const periodInfo = document.getElementById('period-info');
+            if (periodInfo) {
+                periodInfo.style.opacity = enabled ? '1' : '0.4';
+            }
+            
+            // Grey out overlay info
+            const overlayInfo = document.getElementById('overlay-info');
+            if (overlayInfo) {
+                overlayInfo.style.opacity = enabled ? '1' : '0.4';
+            }
+            
+            // Grey out community list section
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.opacity = enabled ? '1' : '0.4';
+                    el.style.pointerEvents = enabled ? 'auto' : 'none';
+                }
+            });
+            
+            // Grey out persistent homology info box
+            const homologyBox = document.getElementById('persistent-homology-box');
+            if (homologyBox) {
+                homologyBox.style.opacity = enabled ? '1' : '0.4';
+                homologyBox.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+            
+            // Grey out homology tags
+            const homologyTags = document.getElementById('homology-tags');
+            if (homologyTags) {
+                homologyTags.style.opacity = enabled ? '1' : '0.4';
+            }
+            
+            // Size legend is always visible - both document and entity networks use it
+        }
+        
+        async function loadTemporalPeriods() {
+            try {
+                const response = await fetch(`${STATIC_DATA_BASE}/temporal-periods.json`);
+                const data = await response.json();
+                temporalPeriods = data.periods;
+                
+                const select = document.getElementById('temporal-filter');
+                select.innerHTML = '';
+                temporalPeriods.forEach(period => {
+                    const option = document.createElement('option');
+                    option.value = period.id;
+                    option.textContent = `${period.name} (${period.documentCount.toLocaleString()} docs)`;
+                    select.appendChild(option);
+                });
+                
+                // Show first period description
+                if (temporalPeriods.length > 0) {
+                    document.getElementById('period-info').textContent = temporalPeriods[0].description;
+                }
+            } catch (err) {
+                console.error('Error loading temporal periods:', err);
+            }
+        }
+        
+        async function loadPeriodDocuments(periodId, threshold) {
+            try {
+                const response = await fetch(`${STATIC_DATA_BASE}/periods/period_${periodId}_${threshold.toFixed(2)}.json`);
+                const data = await response.json();
+                periodDocuments = new Set(data.filePaths);
+            } catch (err) {
+                console.error('Error loading period documents:', err);
+                periodDocuments = null;
+            }
+        }
+        
+        function applyTemporalFilter() {
+            if (!currentData || !currentData.nodeElements) return;
+            
+            if (currentPeriod === 'all' || !periodDocuments) {
+                // Show all nodes
+                currentData.nodeElements.attr('opacity', 1);
+                currentData.linkElements.attr('opacity', 0.6);
+            } else {
+                // Filter to only show documents in period
+                currentData.nodeElements.attr('opacity', n => 
+                    periodDocuments.has(n.file_path) ? 1 : 0.1
+                );
+                currentData.linkElements.attr('opacity', l => {
+                    const sourceInPeriod = periodDocuments.has(
+                        typeof l.source === 'object' ? l.source.file_path : currentData.nodes[l.source].file_path
+                    );
+                    const targetInPeriod = periodDocuments.has(
+                        typeof l.target === 'object' ? l.target.file_path : currentData.nodes[l.target].file_path
+                    );
+                    return (sourceInPeriod && targetInPeriod) ? 0.6 : 0.05;
+                });
+            }
+        }
+        
+        function performSearch(query) {
+            const resultsDiv = document.getElementById('search-results');
+            if (!query || query.length < 2) {
+                resultsDiv.innerHTML = '';
+                // Reset highlighting based on view mode
+                if (viewMode === 'entity' && entityNetworkData) {
+                    entityNetworkData.nodeElements.attr('opacity', 1);
+                    entityNetworkData.linkElements.attr('opacity', 0.6);
+                } else if (currentData && currentData.nodeElements) {
+                    if (currentPeriod === 'all') {
+                        currentData.nodeElements.attr('opacity', 1);
+                        currentData.linkElements.attr('opacity', 0.6);
+                    } else {
+                        applyTemporalFilter();
+                    }
+                }
+                return;
+            }
+            
+            const lowerQuery = query.toLowerCase();
+            const matches = [];
+            
+            if (viewMode === 'entity' && entityNetworkData) {
+                // Search entity nodes
+                entityNetworkData.nodes.forEach(node => {
+                    if (node.name.toLowerCase().includes(lowerQuery)) {
+                        matches.push({ type: node.type, id: node.id, label: node.name, node });
+                    }
+                    if (node.description && node.description.toLowerCase().includes(lowerQuery)) {
+                        if (!matches.find(m => m.id === node.id)) {
+                            matches.push({ type: node.type, id: node.id, label: node.name, node });
+                        }
+                    }
+                });
+            } else if (currentData) {
+                // Search document nodes
+                currentData.nodes.forEach(node => {
+                    const eftaId = getEftaIdGlobal(node.file_path);
+                    if (eftaId.toLowerCase().includes(lowerQuery)) {
+                        matches.push({ type: 'document', id: node.id, label: eftaId, node });
+                    }
+                });
+                
+                // Search community labels
+                Object.entries(currentData.communityLabels || {}).forEach(([commId, data]) => {
+                    if (data.label && data.label.toLowerCase().includes(lowerQuery)) {
+                        matches.push({ type: 'community', id: commId, label: data.label });
+                    }
+                });
+            }
+            
+            // Display results
+            if (matches.length === 0) {
+                resultsDiv.innerHTML = '<div style="font-size: 11px; color: #71717a; padding: 4px;">No matches found</div>';
+            } else {
+                resultsDiv.innerHTML = matches.slice(0, 10).map(m => {
+                    let icon, color;
+                    if (m.type === 'person') {
+                        icon = '👤'; color = '#22c55e';
+                    } else if (m.type === 'company') {
+                        icon = '🏢'; color = '#f59e0b';
+                    } else if (m.type === 'document') {
+                        icon = '📄'; color = '#a855f7';
+                    } else {
+                        icon = '🏷️'; color = '#22c55e';
+                    }
+                    return `<div class="search-result" data-type="${m.type}" data-id="${m.id}" style="font-size: 11px; padding: 6px 8px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; background: rgba(255,255,255,0.03);">
+                        <span style="color: ${color};">${icon}</span>
+                        ${m.label}
+                    </div>`;
+                }).join('');
+                
+                // Add click handlers
+                resultsDiv.querySelectorAll('.search-result').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const type = el.dataset.type;
+                        const id = el.dataset.id;
+                        if (type === 'person' || type === 'company') {
+                            highlightEntityResult(parseInt(id));
+                        } else if (type === 'document') {
+                            highlightSearchResult(parseInt(id));
+                        } else if (type === 'community') {
+                            highlightCommunity(parseInt(id));
+                        }
+                    });
+                    el.addEventListener('mouseover', () => {
+                        el.style.background = 'rgba(255,255,255,0.08)';
+                    });
+                    el.addEventListener('mouseout', () => {
+                        el.style.background = 'rgba(255,255,255,0.03)';
+                    });
+                });
+            }
+            
+            // Highlight matching nodes based on view mode
+            if (viewMode === 'entity' && entityNetworkData && matches.length > 0) {
+                const matchIds = new Set(matches.map(m => m.id));
+                entityNetworkData.nodeElements.attr('opacity', n => matchIds.has(n.id) ? 1 : 0.15);
+                entityNetworkData.linkElements.attr('opacity', 0.05);
+            } else if (currentData && currentData.nodeElements && matches.length > 0) {
+                const matchIds = new Set(matches.filter(m => m.type === 'document').map(m => m.id));
+                currentData.nodeElements.attr('opacity', n => matchIds.has(n.id) ? 1 : 0.15);
+                currentData.linkElements.attr('opacity', 0.05);
+            }
+        }
+        
+        function highlightEntityResult(nodeId) {
+            if (!entityNetworkData) return;
+            const node = entityNetworkData.nodes.find(n => n.id === nodeId);
+            if (node) {
+                // Zoom to node
+                const transform = d3.zoomIdentity
+                    .translate(window.innerWidth / 2 - node.x, window.innerHeight / 2 - node.y)
+                    .scale(1.5);
+                d3.select('#graph').transition().duration(500).call(
+                    d3.zoom().transform, transform
+                );
+                
+                // Highlight node and connections
+                const connected = new Set();
+                entityNetworkData.edges.forEach(e => {
+                    if (e.source.id === nodeId) connected.add(e.target.id);
+                    if (e.target.id === nodeId) connected.add(e.source.id);
+                });
+                entityNetworkData.nodeElements.attr('opacity', n => (n.id === nodeId || connected.has(n.id)) ? 1 : 0.15);
+                entityNetworkData.linkElements.attr('opacity', l => (l.source.id === nodeId || l.target.id === nodeId) ? 0.8 : 0.05);
+            }
+        }
+        
+        function highlightSearchResult(nodeId) {
+            if (!currentData) return;
+            const node = currentData.nodes.find(n => n.id === nodeId);
+            if (node) {
+                // Zoom to node
+                const transform = d3.zoomIdentity
+                    .translate(window.innerWidth / 2 - node.x, window.innerHeight / 2 - node.y)
+                    .scale(1.5);
+                d3.select('#graph').transition().duration(500).call(
+                    d3.zoom().transform, transform
+                );
+                
+                // Highlight node
+                currentData.nodeElements.attr('opacity', n => n.id === nodeId ? 1 : 0.2);
+                currentData.linkElements.attr('opacity', 0.05);
+            }
+        }
+        
+        async function loadEntityNetwork() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').textContent = 'Loading entity network...';
+            
+            try {
+                const response = await fetch(`${STATIC_DATA_BASE}/entity-network.json`);
+                const data = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                // Update stats - use sources instead of communities for entity network
+                document.getElementById('stat-nodes').textContent = data.stats.entityCount;
+                document.getElementById('stat-edges').textContent = data.stats.relationshipCount;
+                document.getElementById('stat-communities-label').textContent = 'Sources';
+                document.getElementById('stat-communities').textContent = data.stats.sourceCount || '-';
+                
+                // Hide the separate sources row since we're showing it in communities slot
+                const sourcesRow = document.getElementById('stat-sources-row');
+                if (sourcesRow) {
+                    sourcesRow.style.display = 'none';
+                }
+                
+                // Clear community list and show entity types instead
+                const container = document.getElementById('communities');
+                container.innerHTML = '<div style="color: #71717a; font-size: 11px;">Entity network view - showing persons and entities with documented relationships. All relationships are sourced.</div>';
+                
+                // Render entity network
+                renderEntityNetwork(data);
+                
+            } catch (err) {
+                console.error('Error loading entity network:', err);
+                document.getElementById('loading').textContent = 'Error loading entity network';
+            }
+        }
+        
+        function renderEntityNetwork(data) {
+            const container = document.getElementById('graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // Clear existing
+            d3.select('#graph').selectAll('*').remove();
+            clearEntityOverlay();
+            
+            // Relationship type precedence (lower index = higher priority)
+            const relationshipPrecedence = [
+                'victim_of', 'accuser_of', 'sued_by',
+                'child_of', 'parent_of', 'spouse', 'former_spouse',
+                'founder', 'co_founder', 'ceo', 'president', 'chairman', 'board_chairman', 'executive', 'executive_vp', 'director', 'partner',
+                'owner', 'investor_in', 'financier_of', 'donor', 'received_funding_from',
+                'financial_advisor', 'power_of_attorney', 'attorney_for', 'prosecutor_of',
+                'employee_of', 'employer_of', 'client_of', 'member_of', 'professor',
+                'mentor_of', 'introduced', 'recruited', 'observed', 'investigated', 'interviewed', 'reported',
+                'business_partner', 'business_associate',
+                'associated_with', 'associate'
+            ];
+            
+            // Deduplicate edges: keep highest precedence relationship per node pair
+            const edgeMap = new Map();
+            data.edges.forEach(edge => {
+                const key = [edge.source, edge.target].sort((a, b) => a - b).join('-');
+                const existing = edgeMap.get(key);
+                if (!existing) {
+                    edgeMap.set(key, { ...edge });
+                } else {
+                    // Compare precedence - lower index wins
+                    const existingPrecedence = relationshipPrecedence.indexOf(existing.relationship_type);
+                    const newPrecedence = relationshipPrecedence.indexOf(edge.relationship_type);
+                    // If not found in precedence list, treat as lowest priority
+                    const existingRank = existingPrecedence === -1 ? 999 : existingPrecedence;
+                    const newRank = newPrecedence === -1 ? 999 : newPrecedence;
+                    if (newRank < existingRank) {
+                        edgeMap.set(key, { ...edge });
+                    }
+                }
+            });
+            const deduplicatedEdges = Array.from(edgeMap.values());
+            
+            // Use deduplicated edges for rendering
+            const renderData = { nodes: data.nodes, edges: deduplicatedEdges };
+            
+            const svg = d3.select('#graph')
+                .attr('width', width)
+                .attr('height', height);
+            
+            const g = svg.append('g');
+            svgGroup = g;
+            
+            // Track if user has manually zoomed during simulation
+            let userHasZoomed = false;
+            
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                    // Mark as user zoom if triggered by user interaction (not programmatic)
+                    if (event.sourceEvent) {
+                        userHasZoomed = true;
+                    }
+                });
+            svg.call(zoom);
+            
+            // Zoom to fit function for entity network
+            function zoomToFit() {
+                const bounds = g.node().getBBox();
+                const fullWidth = width;
+                const fullHeight = height;
+                const bWidth = bounds.width;
+                const bHeight = bounds.height;
+                const midX = bounds.x + bWidth / 2;
+                const midY = bounds.y + bHeight / 2;
+                
+                if (bWidth === 0 || bHeight === 0) return;
+                
+                const scale = 0.85 / Math.max(bWidth / fullWidth, bHeight / fullHeight);
+                const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+                
+                svg.transition()
+                    .duration(500)
+                    .call(zoom.transform, d3.zoomIdentity
+                        .translate(translate[0], translate[1])
+                        .scale(scale));
+            }
+            
+            // Attach zoom to fit button
+            document.getElementById('zoom-fit-btn').onclick = zoomToFit;
+            
+            // Entity type colors
+            const typeColors = {
+                person: '#22c55e',
+                company: '#f59e0b',
+                organization: '#3b82f6'
+            };
+            
+            // Bipartite layout: persons on left column, companies on right column
+            const personX = width * 0.15;  // Left column for persons
+            const companyX = width * 0.85; // Right column for companies
+            
+            // Separate nodes by type
+            const persons = data.nodes.filter(n => n.type === 'person');
+            const companies = data.nodes.filter(n => n.type === 'company');
+            
+            // Build adjacency for barycenter calculation
+            const personNeighbors = new Map();  // person -> list of company indices
+            const companyNeighbors = new Map();  // company -> list of person indices
+            
+            persons.forEach(p => personNeighbors.set(p.id, []));
+            companies.forEach(c => companyNeighbors.set(c.id, []));
+            
+            // Barycenter heuristic for edge crossing minimization
+            // Initial sort by degree
+            persons.sort((a, b) => b.degree - a.degree);
+            companies.sort((a, b) => b.degree - a.degree);
+            
+            // Assign initial positions (indices)
+            const personPos = new Map();
+            const companyPos = new Map();
+            persons.forEach((p, i) => personPos.set(p.id, i));
+            companies.forEach((c, i) => companyPos.set(c.id, i));
+            
+            // Build neighbor lists (for cross-type edges only)
+            renderData.edges.forEach(e => {
+                const sourceId = e.source.id || e.source;
+                const targetId = e.target.id || e.target;
+                const sourceNode = data.nodes.find(n => n.id === sourceId);
+                const targetNode = data.nodes.find(n => n.id === targetId);
+                
+                if (sourceNode && targetNode && sourceNode.type !== targetNode.type) {
+                    if (sourceNode.type === 'person') {
+                        personNeighbors.get(sourceId).push(targetId);
+                        companyNeighbors.get(targetId).push(sourceId);
+                    } else {
+                        companyNeighbors.get(sourceId).push(targetId);
+                        personNeighbors.get(targetId).push(sourceId);
+                    }
+                }
+            });
+            
+            // Barycenter iterations to minimize crossings
+            for (let iter = 0; iter < 10; iter++) {
+                // Reorder companies based on average position of person neighbors
+                companies.forEach(c => {
+                    const neighbors = companyNeighbors.get(c.id);
+                    if (neighbors.length > 0) {
+                        c.barycenter = neighbors.reduce((sum, pid) => sum + personPos.get(pid), 0) / neighbors.length;
+                    } else {
+                        c.barycenter = companyPos.get(c.id);
+                    }
+                });
+                companies.sort((a, b) => a.barycenter - b.barycenter);
+                companies.forEach((c, i) => companyPos.set(c.id, i));
+                
+                // Reorder persons based on average position of company neighbors
+                persons.forEach(p => {
+                    const neighbors = personNeighbors.get(p.id);
+                    if (neighbors.length > 0) {
+                        p.barycenter = neighbors.reduce((sum, cid) => sum + companyPos.get(cid), 0) / neighbors.length;
+                    } else {
+                        p.barycenter = personPos.get(p.id);
+                    }
+                });
+                persons.sort((a, b) => a.barycenter - b.barycenter);
+                persons.forEach((p, i) => personPos.set(p.id, i));
+            }
+            
+            // Calculate vertical spacing for initial positions
+            const margin = 60;
+            const personSpacing = (height - 2 * margin) / Math.max(persons.length - 1, 1);
+            const companySpacing = (height - 2 * margin) / Math.max(companies.length - 1, 1);
+            
+            // Set initial positions based on optimized order (no fixed positions)
+            persons.forEach((node, i) => {
+                node.x = personX;
+                node.y = margin + i * personSpacing;
+            });
+            companies.forEach((node, i) => {
+                node.x = companyX;
+                node.y = margin + i * companySpacing;
+            });
+            
+            // Find max degree for normalization
+            const maxDegree = d3.max(data.nodes, d => d.degree) || 1;
+            
+            // Create simulation with force-directed layout, separated by type
+            const entitySim = d3.forceSimulation(data.nodes)
+                .force('link', d3.forceLink(renderData.edges).id(d => d.id)
+                    .distance(100)
+                    .strength(0.4))
+                .force('charge', d3.forceManyBody()
+                    .strength(d => -80 - (d.degree / maxDegree) * 150))
+                .force('x', d3.forceX(d => d.type === 'person' ? personX : companyX)
+                    .strength(0.25))  // Stronger pull toward type side
+                .force('y', d3.forceY(height / 2).strength(0.03))
+                .force('collision', d3.forceCollide().radius(25))
+                .alphaDecay(0.015)
+                .velocityDecay(0.35);
+            
+            // Zoom to fit when simulation completes (unless user has manually zoomed)
+            entitySim.on('end', () => {
+                if (!userHasZoomed) {
+                    zoomToFit();
+                }
+            });
+            
+            // Draw edges - straight lines
+            const links = g.append('g')
+                .selectAll('line')
+                .data(renderData.edges)
+                .enter()
+                .append('line')
+                .attr('stroke', '#4a5568')
+                .attr('stroke-opacity', 0.6)
+                .attr('stroke-width', d => d.confidence ? d.confidence * 2 : 1);
+            
+            // Draw edge labels (relationship type) - hidden by default, shown on hover
+            const edgeLabels = g.append('g')
+                .selectAll('text')
+                .data(renderData.edges)
+                .enter()
+                .append('text')
+                .attr('font-family', "'JetBrains Mono', monospace")
+                .attr('font-size', '7px')
+                .attr('fill', '#71717a')
+                .attr('text-anchor', 'middle')
+                .attr('opacity', 0)  // Hidden by default
+                .text(d => d.relationship_type);
+            
+            // Draw nodes
+            const nodes = g.append('g')
+                .selectAll('g')
+                .data(data.nodes)
+                .enter()
+                .append('g')
+                .attr('cursor', 'pointer')
+                .call(d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) entitySim.alphaTarget(0.3).restart();
+                        d.fx = d.x; d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+                    .on('end', (event, d) => {
+                        if (!event.active) entitySim.alphaTarget(0);
+                        d.fx = null; d.fy = null;
+                    }));
+            
+            // Create size scale based on selected metric
+            // Use type-appropriate metrics: person_* for persons, company_* or full network for companies
+            const sizeAttr = document.getElementById('node-size').value;
+            
+            // Map dropdown values to type-specific field names
+            const personMetricMap = {
+                'degree': 'person_degree',
+                'betweenness': 'person_betweenness',
+                'eigenvector': 'person_eigenvector',
+                'pagerank': 'pagerank',  // Use full network (no person-specific pagerank)
+            };
+            const companyMetricMap = {
+                'degree': 'company_degree',
+                'betweenness': 'betweenness',  // Use full network
+                'eigenvector': 'eigenvector',
+                'pagerank': 'pagerank',
+            };
+            
+            // Get value for a node using type-appropriate metric
+            function getMetricValue(d) {
+                if (d.type === 'person') {
+                    const field = personMetricMap[sizeAttr] || sizeAttr;
+                    return d[field] != null ? d[field] : (d[sizeAttr] || 0);
+                } else {
+                    const field = companyMetricMap[sizeAttr] || sizeAttr;
+                    return d[field] != null ? d[field] : (d[sizeAttr] || 0);
+                }
+            }
+            
+            // Compute separate scales for persons and companies
+            const personNodes = data.nodes.filter(d => d.type === 'person');
+            const companyNodes = data.nodes.filter(d => d.type === 'company');
+            
+            const personMax = d3.max(personNodes, getMetricValue) || 1;
+            const companyMax = d3.max(companyNodes, getMetricValue) || 1;
+            
+            const personScale = d3.scaleSqrt().domain([0, personMax]).range([1, 5]);
+            const companyScale = d3.scaleSqrt().domain([0, companyMax]).range([1, 5]);
+            
+            // Combined getter for size
+            function getNodeSize(d) {
+                const val = getMetricValue(d);
+                return d.type === 'person' ? personScale(val) : companyScale(val);
+            }
+            
+            // Node shapes: circle for person, rect for company
+            nodes.each(function(d) {
+                const node = d3.select(this);
+                const size = getNodeSize(d);
+                if (d.type === 'person') {
+                    node.append('circle')
+                        .attr('class', 'entity-shape')
+                        .attr('r', size)
+                        .attr('fill', typeColors.person)
+                        .attr('fill-opacity', 0.8);
+                } else {
+                    node.append('rect')
+                        .attr('class', 'entity-shape')
+                        .attr('x', -size)
+                        .attr('y', -size)
+                        .attr('width', size * 2)
+                        .attr('height', size * 2)
+                        .attr('rx', 3)
+                        .attr('fill', typeColors.company)
+                        .attr('fill-opacity', 0.8);
+                }
+            });
+            
+            // Store references for updating
+            currentData = data;
+            currentData.entityNodes = nodes;
+            currentData.getMetricValue = getMetricValue;
+            currentData.personScale = personScale;
+            currentData.companyScale = companyScale;
+            currentData.getNodeSize = getNodeSize;
+            currentData.entityLinks = links;
+            currentData.entityEdgeLabels = edgeLabels;
+            
+            // Node labels
+            nodes.append('text')
+                .attr('dy', 24)
+                .attr('text-anchor', 'middle')
+                .attr('font-family', "'JetBrains Mono', monospace")
+                .attr('font-size', '9px')
+                .attr('font-weight', '400')
+                .attr('fill', '#fafafa')
+                .text(d => d.name.length > 20 ? d.name.substring(0, 20) + '...' : d.name);
+            
+            // Tooltip with click-to-pin functionality
+            const tooltip = document.getElementById('tooltip');
+            let pinnedNode = null;  // Track which node is pinned
+            
+            function showNodeTooltip(d, isPinned = false) {
+                // Count connections and gather cited sources
+                // Use original data.edges to count ALL connections (including deduplicated ones)
+                let connectionCount = 0;
+                const connections = [];
+                const allSources = new Map(); // Use Map to dedupe by citation text
+                
+                data.edges.forEach(e => {
+                    // Handle both formats: source can be node object or numeric ID
+                    const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+                    const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+                    
+                    if (sourceId === d.id || targetId === d.id) {
+                        connectionCount++;
+                        // Find the other node
+                        const otherId = sourceId === d.id ? targetId : sourceId;
+                        const otherNode = data.nodes.find(n => n.id === otherId);
+                        if (otherNode) {
+                            connections.push({ name: otherNode.name, type: e.relationship_type, sources: e.sources || [] });
+                        }
+                        // Collect unique sources
+                        if (e.sources) {
+                            e.sources.forEach(s => {
+                                if (s.citation && !allSources.has(s.citation)) {
+                                    allSources.set(s.citation, s);
+                                }
+                            });
+                        }
+                    }
+                });
+                
+                // Also collect description sources
+                if (d.description_sources) {
+                    d.description_sources.forEach(s => {
+                        if (s.citation && !allSources.has(s.citation)) {
+                            allSources.set(s.citation, s);
+                        }
+                    });
+                }
+                
+                const typeIcon = d.type === 'person' ? '👤' : '🏢';
+                const typeLabel = d.type.charAt(0).toUpperCase() + d.type.slice(1);
+                
+                // Build sources HTML with expandable "more" section
+                let sourcesHtml = '';
+                const expanderId = `sources-expander-${d.id}`;
+                if (allSources.size > 0) {
+                    const allSourcesList = Array.from(allSources.values());
+                    const topSources = allSourcesList.slice(0, 3);
+                    const additionalSources = allSourcesList.slice(3);
+                    
+                    const formatSource = s => s.url 
+                        ? `<a href="${s.url}" target="_blank" style="color: #60a5fa; text-decoration: none; display: block; margin-bottom: 4px;">${s.citation.length > 80 ? s.citation.substring(0, 80) + '...' : s.citation}</a>` 
+                        : `<div style="margin-bottom: 4px;">${s.citation.length > 80 ? s.citation.substring(0, 80) + '...' : s.citation}</div>`;
+                    
+                    sourcesHtml = `
+                        <div class="tooltip-row" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <span class="tooltip-label" style="display: block; margin-bottom: 6px;">📚 Sources for Connection (${allSources.size}):</span>
+                            <div style="font-size: 10px; line-height: 1.5; color: #a1a1aa;">
+                                ${topSources.map(formatSource).join('')}
+                                ${additionalSources.length > 0 ? `
+                                    <div class="sources-toggle" data-target="${expanderId}" data-count="${additionalSources.length}" style="display: inline-block; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 4px; padding: 4px 8px; color: #a855f7; cursor: pointer; margin-top: 8px; font-style: normal; font-weight: 500;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${additionalSources.length} more sources</div>
+                                    <div id="${expanderId}" class="sources-expanded" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                                        ${additionalSources.map(formatSource).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                tooltip.innerHTML = `
+                    <h4>${typeIcon} ${d.name}</h4>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Type:</span> ${typeLabel}
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Connections:</span> ${connectionCount}
+                    </div>
+                    ${d.description ? `<div class="tooltip-row" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);"><span style="color: #a1a1aa; font-size: 11px; line-height: 1.4;">${d.description}</span></div>` : ''}
+                    ${sourcesHtml}
+                `;
+                
+                // Add click handler for expandable sources
+                const toggle = tooltip.querySelector('.sources-toggle');
+                if (toggle) {
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const targetId = toggle.getAttribute('data-target');
+                        const count = toggle.getAttribute('data-count');
+                        const expanded = document.getElementById(targetId);
+                        const icon = toggle.querySelector('.toggle-icon');
+                        if (expanded) {
+                            const isHidden = expanded.style.display === 'none';
+                            expanded.style.display = isHidden ? 'block' : 'none';
+                            if (icon) {
+                                icon.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+                            }
+                            toggle.innerHTML = isHidden 
+                                ? '<span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transform: rotate(90deg); transition: transform 0.2s;">▶</span>Hide additional sources'
+                                : `<span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${count} more sources`;
+                        }
+                    });
+                }
+                tooltip.classList.add('visible');
+                
+                // Highlight connected
+                const connected = new Set();
+                renderData.edges.forEach(e => {
+                    if (e.source.id === d.id) connected.add(e.target.id);
+                    if (e.target.id === d.id) connected.add(e.source.id);
+                });
+                nodes.attr('opacity', n => (n.id === d.id || connected.has(n.id)) ? 1 : 0.2);
+                links.attr('opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 0.8 : 0.05);
+                
+                // Show edge labels only for connected edges with twinkling effect
+                edgeLabels
+                    .attr('fill', '#22c55e')
+                    .attr('opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0)
+                    .attr('class', l => (l.source.id === d.id || l.target.id === d.id) ? 'edge-label-twinkle' : '')
+                    .style('animation-delay', () => `${Math.random() * 10}s`);
+            }
+            
+            function resetHighlighting() {
+                tooltip.classList.remove('visible');
+                tooltip.classList.remove('pinned');
+                nodes.attr('opacity', 1);
+                links.attr('opacity', 0.6);
+                edgeLabels.attr('opacity', 0).attr('class', '');
+            }
+            
+            // Stop clicks inside tooltip from propagating
+            tooltip.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            
+            nodes.on('mouseover', (event, d) => {
+                if (!pinnedNode) {
+                    showNodeTooltip(d);
+                }
+            });
+            
+            nodes.on('mouseout', () => {
+                if (!pinnedNode) {
+                    resetHighlighting();
+                }
+            });
+            
+            nodes.on('click', (event, d) => {
+                event.stopPropagation();
+                if (pinnedNode === d.id) {
+                    // Clicking same node unpins it
+                    pinnedNode = null;
+                    tooltip.classList.remove('pinned');
+                    resetHighlighting();
+                    entitySim.alpha(0.3).restart();  // Resume simulation
+                } else {
+                    // Pin this node
+                    pinnedNode = d.id;
+                    tooltip.classList.add('pinned');
+                    showNodeTooltip(d, true);
+                    entitySim.stop();  // Stop simulation while pinned
+                }
+            });
+            
+            // Click on background to unpin
+            svg.on('click', () => {
+                if (pinnedNode) {
+                    pinnedNode = null;
+                    tooltip.classList.remove('pinned');
+                    resetHighlighting();
+                    entitySim.alpha(0.3).restart();  // Resume simulation
+                }
+            });
+            
+            // Simulation tick
+            entitySim.on('tick', () => {
+                links
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                edgeLabels
+                    .attr('x', d => (d.source.x + d.target.x) / 2)
+                    .attr('y', d => (d.source.y + d.target.y) / 2);
+                
+                nodes.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+            
+            // Store entity network data for search
+            entityNetworkData = {
+                nodes: data.nodes,
+                edges: renderData.edges,
+                nodeElements: nodes,
+                linkElements: links
+            };
+            
+            // Update legend for entity network
+            updateEntityLegend();
+        }
+        
+        function updateEntityLegend() {
+            const container = document.getElementById('legend-items');
+            container.innerHTML = `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #22c55e; border-radius: 50%;"></div>
+                    <span>Person</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f59e0b; border-radius: 3px;"></div>
+                    <span>Entity</span>
+                </div>
+            `;
+            
+            // Get current size attribute for simple label
+            const sizeAttr = document.getElementById('node-size').value;
+            const sizeLabels = {
+                'degree': 'Degree',
+                'betweenness': 'Betweenness',
+                'eigenvector': 'Eigenvector',
+                'pagerank': 'PageRank'
+            };
+            const sizeLabel = sizeLabels[sizeAttr] || 'Size';
+            
+            // Size legend - consistent with document network (purple stroke, no fill)
+            document.getElementById('size-legend-items').innerHTML = `
+                <div style="font-size: 10px; color: #a1a1aa; margin-bottom: 6px;">${sizeLabel}</div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 2px; height: 2px;"></div>
+                    <span>Low</span>
+                </div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 6px; height: 6px;"></div>
+                    <span>Medium</span>
+                </div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 10px; height: 10px;"></div>
+                    <span>High</span>
+                </div>
+            `;
+        }
+        
+        async function loadThresholds() {
+            try {
+                const response = await fetch(`${STATIC_DATA_BASE}/thresholds.json`);
+                const data = await response.json();
+                
+                availableThresholds = data.thresholds || [];
+                optimalThreshold = data.optimal || 0.35;
+                thresholdReason = data.reason || 'Maximizes network modularity';
+                
+                // Parse persistence data if JSON
+                try {
+                    persistenceData = JSON.parse(thresholdReason);
+                    h0Threshold = persistenceData.h0?.threshold;
+                    h1Threshold = persistenceData.h1?.threshold;
+                } catch (e) {
+                    // Not JSON, use as string
+                    persistenceData = null;
+                }
+                
+                // Update slider range based on available thresholds
+                if (availableThresholds.length > 0) {
+                    const min = Math.min(...availableThresholds.map(t => t.similarity_threshold));
+                    const max = Math.max(...availableThresholds.map(t => t.similarity_threshold));
+                    const slider = document.getElementById('threshold-slider');
+                    // Round to avoid floating point issues
+                    slider.min = Math.round(min * 100) / 100;
+                    slider.max = Math.round(max * 100) / 100;
+                    slider.step = 0.05;
+                    
+                    // Create detent markers
+                    createSliderDetents(slider.min, slider.max);
+                }
+                
+            } catch (err) {
+                console.error('Error loading thresholds:', err);
+            }
+        }
+        
+        function createSliderDetents(min, max) {
+            const sliderContainer = document.getElementById('threshold-slider').parentElement;
+            const slider = document.getElementById('threshold-slider');
+            
+            // Remove existing detents and ticks
+            sliderContainer.querySelectorAll('.slider-detent, .slider-tick').forEach(d => d.remove());
+            
+            // Parse as floats since DOM attributes are strings
+            min = parseFloat(min);
+            max = parseFloat(max);
+            
+            const range = max - min;
+            const step = 0.05;
+            
+            // The slider thumb center moves from (thumbHalfWidth) at min 
+            // to (100% - thumbHalfWidth) at max
+            // So tick position = thumbHalfWidth + pos% * (100% - thumbWidth)
+            const thumbHalfWidth = 8; // half of 16px thumb
+            
+            // Add minor tick marks for each step
+            for (let val = min; val <= max + 0.001; val += step) {
+                const pos = (val - min) / range; // 0 to 1
+                const tick = document.createElement('div');
+                tick.className = 'slider-tick';
+                tick.style.left = `calc(${thumbHalfWidth}px + (100% - ${thumbHalfWidth * 2}px) * ${pos})`;
+                sliderContainer.appendChild(tick);
+            }
+            
+            // H0 detent
+            if (h0Threshold !== null) {
+                const h0Pos = (h0Threshold - min) / range;
+                const h0Detent = document.createElement('div');
+                h0Detent.className = 'slider-detent h0-detent';
+                h0Detent.style.left = `calc(${thumbHalfWidth}px + (100% - ${thumbHalfWidth * 2}px) * ${h0Pos})`;
+                h0Detent.title = `H₀ Optimal: ${h0Threshold.toFixed(2)}`;
+                sliderContainer.appendChild(h0Detent);
+            }
+            
+            // H1 detent
+            if (h1Threshold !== null) {
+                const h1Pos = (h1Threshold - min) / range;
+                const h1Detent = document.createElement('div');
+                h1Detent.className = 'slider-detent h1-detent';
+                h1Detent.style.left = `calc(${thumbHalfWidth}px + (100% - ${thumbHalfWidth * 2}px) * ${h1Pos})`;
+                h1Detent.title = `H₁ Optimal: ${h1Threshold.toFixed(2)}`;
+                sliderContainer.appendChild(h1Detent);
+            }
+            
+            // Update tags based on initial threshold
+            updateHomologyTags(parseFloat(document.getElementById('threshold-slider').value));
+        }
+        
+        function updateHomologyTags(threshold) {
+            const h0Tag = document.getElementById('h0-tag');
+            const h1Tag = document.getElementById('h1-tag');
+            
+            const isH0 = h0Threshold !== null && Math.abs(threshold - h0Threshold) < 0.01;
+            const isH1 = h1Threshold !== null && Math.abs(threshold - h1Threshold) < 0.01;
+            
+            // Use visibility to preserve layout space
+            h0Tag.style.visibility = isH0 ? 'visible' : 'hidden';
+            h1Tag.style.visibility = isH1 ? 'visible' : 'hidden';
+        }
+        
+        function updateThresholdInfo(threshold) {
+            const isH0 = h0Threshold && Math.abs(threshold - h0Threshold) < 0.01;
+            const isH1 = h1Threshold && Math.abs(threshold - h1Threshold) < 0.01;
+            const info = availableThresholds.find(t => Math.abs(t.similarity_threshold - threshold) < 0.01);
+            const infoDiv = document.getElementById('threshold-info');
+            
+            if (isH0) {
+                infoDiv.innerHTML = `
+                    <div class="info-text">Component threshold — maximizes cluster separation before merging.</div>
+                `;
+            } else if (isH1) {
+                infoDiv.innerHTML = `
+                    <div class="info-text">Cycle threshold — reveals loop structures and redundant connections.</div>
+                `;
+            } else if (info) {
+                const comparison = threshold > optimalThreshold ? 'Higher' : 'Lower';
+                infoDiv.innerHTML = `
+                    <div class="info-text">${comparison} similarity. ${info.community_count} communities, ${info.node_count} nodes. Modularity: ${info.modularity?.toFixed(4) || 'N/A'}</div>
+                `;
+            } else {
+                infoDiv.innerHTML = `
+                    <div class="info-text" style="color: #f59e0b;">No pre-computed data at this threshold</div>
+                `;
+            }
+        }
+        
+        async function loadNetwork(threshold) {
+            document.getElementById('loading').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${STATIC_DATA_BASE}/networks/network_${threshold.toFixed(2)}.json`);
+                const data = await response.json();
+                
+                currentData = data;
+                document.getElementById('loading').style.display = 'none';
+                
+                // Update stats
+                document.getElementById('stat-nodes').textContent = data.stats.nodeCount;
+                document.getElementById('stat-edges').textContent = data.stats.edgeCount;
+                document.getElementById('stat-communities-label').textContent = 'Communities';
+                document.getElementById('stat-communities').textContent = data.stats.communityCount;
+                
+                // Hide sources row for document similarity view
+                const sourcesRow = document.getElementById('stat-sources-row');
+                if (sourcesRow) {
+                    sourcesRow.style.display = 'none';
+                }
+                
+                // Update community list
+                updateCommunityList(data);
+                
+                // Update legend
+                updateLegend(data);
+                
+                // Render graph
+                renderGraph(data);
+                
+            } catch (err) {
+                console.error('Error loading network:', err);
+                document.getElementById('loading').textContent = 'Error loading data';
+            }
+        }
+        
+        // Known acronyms that should be uppercase
+        const ACRONYMS = new Set([
+            'FBI', 'SEC', 'CIA', 'DOJ', 'IRS', 'USANYS', 'USAO', 'DOD', 'NSA', 
+            'NYPD', 'SDNY', 'DOC', 'AG', 'USA', 'UK', 'US', 'EU', 'UN', 'NYC',
+            'CEO', 'CFO', 'COO', 'CTO', 'VP', 'EVP', 'SVP', 'MD', 'LLC', 'LLP',
+            'JP', 'IBM', 'MIT', 'NYU', 'UCLA', 'USC', 'ACLU', 'NGO', 'PR', 'HR',
+            'PDF', 'DNA', 'HIV', 'AIDS', 'ATF', 'DEA', 'ICE', 'DHS', 'TSA',
+            'SHU', 'MCC', 'MDC', 'BOP', 'OPR', 'CVRA'
+        ]);
+        
+        // Function to properly capitalize text, handling acronyms
+        function properCapitalize(text) {
+            if (!text) return text;
+            // Split on both spaces and slashes to handle label format "Term / Term / Term"
+            return text.split(/(\s+|\/)/g).map(part => {
+                const trimmed = part.trim();
+                const upper = trimmed.toUpperCase();
+                if (ACRONYMS.has(upper)) {
+                    return upper;
+                }
+                return part;
+            }).join('');
+        }
+        
+        // Helper function to build descriptive community label from top entities
+        function getCommunityLabel(commId, communityLabels) {
+            const commData = communityLabels[commId];
+            // Use the label field which has the "Name / Term / Term" format
+            if (commData && commData.label) {
+                return properCapitalize(commData.label);
+            }
+            return `Community ${commId}`;
+        }
+
+        function updateCommunityList(data) {
+            const container = document.getElementById('communities');
+            container.innerHTML = '';
+            
+            // Group nodes by community
+            const communityGroups = {};
+            data.nodes.forEach(node => {
+                if (!communityGroups[node.community]) {
+                    communityGroups[node.community] = [];
+                }
+                communityGroups[node.community].push(node);
+            });
+            
+            // Sort by size
+            const sortedCommunities = Object.entries(communityGroups)
+                .sort((a, b) => b[1].length - a[1].length)
+                .slice(0, 20);
+            
+            sortedCommunities.forEach(([commId, nodes]) => {
+                const label = getCommunityLabel(commId, data.communityLabels);
+                const item = document.createElement('div');
+                item.className = 'community-item';
+                item.dataset.community = commId;
+                item.innerHTML = `
+                    <div class="community-name" style="color: ${communityColors(commId)}">${label}</div>
+                    <div class="community-meta">${nodes.length} documents</div>
+                `;
+                item.addEventListener('click', () => highlightCommunity(parseInt(commId)));
+                container.appendChild(item);
+            });
+        }
+        
+        function updateLegend(data) {
+            const container = document.getElementById('legend-items');
+            container.innerHTML = '';
+            
+            // Sort communities by size
+            const communitySizes = {};
+            data.nodes.forEach(n => {
+                communitySizes[n.community] = (communitySizes[n.community] || 0) + 1;
+            });
+            const communities = [...new Set(data.nodes.map(n => n.community))]
+                .sort((a, b) => communitySizes[b] - communitySizes[a]);
+            const topCommunities = communities.slice(0, 12);
+            const remainingCommunities = communities.slice(12);
+            
+            topCommunities.forEach(comm => {
+                const label = getCommunityLabel(comm, data.communityLabels);
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.style.cursor = 'pointer';
+                item.innerHTML = `
+                    <div class="legend-color" style="background: ${communityColors(comm)}"></div>
+                    <span title="${label} (${communitySizes[comm]} docs)">${label}</span>
+                `;
+                item.addEventListener('click', () => highlightCommunity(comm));
+                container.appendChild(item);
+            });
+            
+            if (remainingCommunities.length > 0) {
+                // Create expandable container for remaining communities
+                const expandedContainer = document.createElement('div');
+                expandedContainer.id = 'legend-expanded';
+                expandedContainer.style.display = 'none';
+                
+                remainingCommunities.forEach(comm => {
+                    const label = getCommunityLabel(comm, data.communityLabels);
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    item.style.cursor = 'pointer';
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${communityColors(comm)}"></div>
+                        <span title="${label} (${communitySizes[comm]} docs)">${label}</span>
+                    `;
+                    item.addEventListener('click', () => highlightCommunity(comm));
+                    expandedContainer.appendChild(item);
+                });
+                
+                container.appendChild(expandedContainer);
+                
+                // Create toggle button
+                const toggle = document.createElement('div');
+                toggle.className = 'legend-item';
+                toggle.style.cursor = 'pointer';
+                toggle.innerHTML = `<span style="color: #a855f7;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>+${remainingCommunities.length} more</span>`;
+                toggle.addEventListener('click', () => {
+                    const expanded = document.getElementById('legend-expanded');
+                    const isHidden = expanded.style.display === 'none';
+                    expanded.style.display = isHidden ? 'block' : 'none';
+                    const icon = toggle.querySelector('.toggle-icon');
+                    if (icon) {
+                        icon.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+                    }
+                    toggle.querySelector('span').innerHTML = isHidden
+                        ? `<span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transform: rotate(90deg); transition: transform 0.2s;">▶</span>Hide ${remainingCommunities.length} communities`
+                        : `<span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>+${remainingCommunities.length} more`;
+                });
+                container.appendChild(toggle);
+            }
+            
+            // Size legend
+            const sizeAttrLabel = document.getElementById('node-size').value;
+            const docSizeLabels = {
+                'degree': 'Degree',
+                'betweenness': 'Betweenness',
+                'pagerank': 'PageRank',
+                'eigenvector': 'Eigenvector'
+            };
+            const sizeLabel = docSizeLabels[sizeAttrLabel] || 'Size';
+            const sizeLegend = document.getElementById('size-legend-items');
+            sizeLegend.innerHTML = `
+                <div style="font-size: 10px; color: #a1a1aa; margin-bottom: 6px;">${sizeLabel}</div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 2px; height: 2px;"></div>
+                    <span>Low</span>
+                </div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 6px; height: 6px;"></div>
+                    <span>Medium</span>
+                </div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 10px; height: 10px;"></div>
+                    <span>High</span>
+                </div>
+            `;
+        }
+        
+        function renderGraph(data) {
+            const container = document.getElementById('graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // Clear existing
+            d3.select('#graph').selectAll('*').remove();
+            clearEntityOverlay();
+            
+            const svg = d3.select('#graph')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Add zoom behavior
+            const g = svg.append('g');
+            svgGroup = g;  // Store reference for entity overlay
+            
+            // Track if user has manually zoomed during simulation
+            let userHasZoomed = false;
+            
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                    // Mark as user zoom if triggered by user interaction (not programmatic)
+                    if (event.sourceEvent) {
+                        userHasZoomed = true;
+                    }
+                });
+            
+            svg.call(zoom);
+            
+            // Zoom to fit function
+            function zoomToFit() {
+                const bounds = g.node().getBBox();
+                const fullWidth = width;
+                const fullHeight = height;
+                const bWidth = bounds.width;
+                const bHeight = bounds.height;
+                const midX = bounds.x + bWidth / 2;
+                const midY = bounds.y + bHeight / 2;
+                
+                if (bWidth === 0 || bHeight === 0) return;
+                
+                const scale = 0.85 / Math.max(bWidth / fullWidth, bHeight / fullHeight);
+                const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+                
+                svg.transition()
+                    .duration(500)
+                    .call(zoom.transform, d3.zoomIdentity
+                        .translate(translate[0], translate[1])
+                        .scale(scale));
+            }
+            
+            // Attach zoom to fit button
+            document.getElementById('zoom-fit-btn').onclick = zoomToFit;
+            
+            // Create simulation with optimized settings for speed
+            simulation = d3.forceSimulation(data.nodes)
+                .force('link', d3.forceLink(data.edges)
+                    .id(d => d.id)
+                    .distance(50)
+                    .strength(0.5))
+                .force('charge', d3.forceManyBody()
+                    .strength(-30)
+                    .distanceMax(150)
+                    .theta(0.9))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .alphaDecay(0.05)
+                .velocityDecay(0.4);
+            
+            // Draw edges - colored by source community
+            const links = g.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(data.edges)
+                .enter()
+                .append('line')
+                .attr('stroke', d => {
+                    const sourceNode = data.nodes[d.source] || d.source;
+                    return communityColors(sourceNode.community);
+                })
+                .attr('stroke-opacity', 0.7)
+                .attr('stroke-width', 0.5);
+            
+            // Draw nodes
+            const sizeAttr = document.getElementById('node-size').value;
+            const sizeScale = d3.scaleSqrt()
+                .domain([0, d3.max(data.nodes, d => d[sizeAttr] || 1)])
+                .range([1, 5]);
+            
+            const nodes = g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('circle')
+                .data(data.nodes)
+                .enter()
+                .append('circle')
+                .attr('r', d => sizeScale(d[sizeAttr] || 1))
+                .attr('fill', d => communityColors(d.community))
+                .attr('stroke', 'none')
+                .attr('cursor', 'pointer')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // Tooltip interactions
+            const tooltip = document.getElementById('tooltip');
+            
+            // Helper to extract EFTA ID from file path
+            function getEftaId(filePath) {
+                const match = filePath.match(/(EFTA\d+)/);
+                return match ? match[1] : filePath.split('/').pop().replace('_extracted.txt', '');
+            }
+            
+            nodes.on('mouseover', (event, d) => {
+                // Don't change hover highlighting if a node is selected (click state > 0)
+                if (nodeClickState > 0) return;
+                
+                const label = getCommunityLabel(d.community, data.communityLabels);
+                const eftaId = getEftaId(d.file_path);
+                tooltip.innerHTML = `
+                    <h4>${eftaId}</h4>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Community:</span> ${label}
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Degree:</span> ${d.degree.toFixed(4)}
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Betweenness:</span> ${d.betweenness.toFixed(4)}
+                    </div>
+                `;
+                tooltip.classList.add('visible');
+                
+                // Highlight connected nodes
+                const connectedIds = new Set();
+                data.edges.forEach(e => {
+                    if (e.source.id === d.id || e.source === d.id) connectedIds.add(typeof e.target === 'object' ? e.target.id : e.target);
+                    if (e.target.id === d.id || e.target === d.id) connectedIds.add(typeof e.source === 'object' ? e.source.id : e.source);
+                });
+                
+                nodes.attr('opacity', n => (n.id === d.id || connectedIds.has(n.id)) ? 1 : 0.2);
+                links.attr('opacity', l => 
+                    (l.source.id === d.id || l.source === d.id || l.target.id === d.id || l.target === d.id) ? 0.8 : 0.05);
+            });
+            
+            nodes.on('mouseout', () => {
+                // Don't reset if a node is selected (click state > 0)
+                if (nodeClickState > 0) return;
+                
+                tooltip.classList.remove('visible');
+                if (!selectedCommunity) {
+                    nodes.attr('opacity', 1);
+                    links.attr('opacity', 0.6);
+                }
+            });
+            
+            nodes.on('click', (event, d) => {
+                event.stopPropagation();  // Prevent background click
+                handleNodeClick(d, nodes, links, data);
+            });
+            
+            // Click on background to exit overlay state
+            svg.on('click', () => {
+                if (nodeClickState === 2) {
+                    nodeClickState = 0;
+                    selectedDocNode = null;
+                    clearEntityOverlay();
+                    closeDetailPanel();
+                    
+                    // Reset opacity
+                    nodes.attr('opacity', 1);
+                    links.attr('opacity', 0.6);
+                    
+                    // Hide tooltip
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.classList.remove('visible');
+                    tooltip.classList.remove('pinned');
+                    
+                    // Resume simulation
+                    simulation.alpha(0.1).restart();
+                    
+                    updateOverlaySteps(0);
+                }
+            });
+            
+            // Animation with throttling for performance
+            let ticks = 0;
+            simulation.on('tick', () => {
+                ticks++;
+                // Only update DOM every 3rd tick during initial simulation
+                if (ticks < 100 && ticks % 3 !== 0) return;
+                
+                links
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                nodes
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            });
+            
+            // Zoom to fit when simulation completes (unless user has manually zoomed)
+            simulation.on('end', () => {
+                if (!userHasZoomed) {
+                    zoomToFit();
+                }
+            });
+            
+            // Store references
+            currentData.nodeElements = nodes;
+            currentData.linkElements = links;
+            currentData.sizeScale = sizeScale;
+        }
+        
+        function updateNodeSizes() {
+            const sizeAttr = document.getElementById('node-size').value;
+            
+            if (viewMode === 'entity' && currentData && currentData.entityNodes) {
+                // Entity network: use type-appropriate metrics
+                // Rebuild metric maps for new attribute
+                const personMetricMap = {
+                    'degree': 'person_degree',
+                    'betweenness': 'person_betweenness',
+                    'eigenvector': 'person_eigenvector',
+                    'pagerank': 'pagerank',
+                };
+                const companyMetricMap = {
+                    'degree': 'company_degree',
+                    'betweenness': 'betweenness',
+                    'eigenvector': 'eigenvector',
+                    'pagerank': 'pagerank',
+                };
+                
+                function getMetricValue(d) {
+                    if (d.type === 'person') {
+                        const field = personMetricMap[sizeAttr] || sizeAttr;
+                        return d[field] != null ? d[field] : (d[sizeAttr] || 0);
+                    } else {
+                        const field = companyMetricMap[sizeAttr] || sizeAttr;
+                        return d[field] != null ? d[field] : (d[sizeAttr] || 0);
+                    }
+                }
+                
+                const personNodes = currentData.nodes.filter(d => d.type === 'person');
+                const companyNodes = currentData.nodes.filter(d => d.type === 'company');
+                
+                const personMax = d3.max(personNodes, getMetricValue) || 1;
+                const companyMax = d3.max(companyNodes, getMetricValue) || 1;
+                
+                const personScale = d3.scaleSqrt().domain([0, personMax]).range([1, 5]);
+                const companyScale = d3.scaleSqrt().domain([0, companyMax]).range([1, 5]);
+                
+                currentData.entityNodes.each(function(d) {
+                    const node = d3.select(this);
+                    const val = getMetricValue(d);
+                    const size = d.type === 'person' ? personScale(val) : companyScale(val);
+                    const shape = node.select('.entity-shape');
+                    
+                    if (d.type === 'person') {
+                        shape.transition().duration(500).attr('r', size);
+                    } else {
+                        shape.transition().duration(500)
+                            .attr('x', -size)
+                            .attr('y', -size)
+                            .attr('width', size * 2)
+                            .attr('height', size * 2);
+                    }
+                });
+            } else if (currentData && currentData.nodeElements) {
+                // Document network: circles only
+                const sizeScale = d3.scaleSqrt()
+                    .domain([0, d3.max(currentData.nodes, d => d[sizeAttr] || 1)])
+                    .range([1, 5]);
+                
+                currentData.nodeElements
+                    .transition()
+                    .duration(500)
+                    .attr('r', d => sizeScale(d[sizeAttr] || 1));
+            }
+        }
+        
+        function highlightCommunity(commId) {
+            if (selectedCommunity === commId) {
+                // Deselect
+                selectedCommunity = null;
+                currentData.nodeElements.attr('opacity', 1);
+                currentData.linkElements.attr('opacity', 0.6);
+                document.querySelectorAll('.community-item').forEach(el => el.classList.remove('active'));
+            } else {
+                selectedCommunity = commId;
+                currentData.nodeElements.attr('opacity', d => d.community === commId ? 1 : 0.15);
+                currentData.linkElements.attr('opacity', l => {
+                    const sourceComm = typeof l.source === 'object' ? l.source.community : currentData.nodes[l.source].community;
+                    const targetComm = typeof l.target === 'object' ? l.target.community : currentData.nodes[l.target].community;
+                    return (sourceComm === commId && targetComm === commId) ? 0.8 : 0.05;
+                });
+                document.querySelectorAll('.community-item').forEach(el => {
+                    el.classList.toggle('active', parseInt(el.dataset.community) === commId);
+                });
+            }
+        }
+        
+        // Helper to extract EFTA ID from file path (global for reuse)
+        function getEftaIdGlobal(filePath) {
+            if (!filePath) return 'Document';
+            const match = filePath.match(/(EFTA\d+)/);
+            return match ? match[1] : filePath.split('/').pop().replace('_extracted.txt', '');
+        }
+        
+        // Handle node click with three-state cycle: none -> focus -> overlay -> none
+        function handleNodeClick(d, nodes, links, data) {
+            const eftaId = getEftaIdGlobal(d.file_path);
+            
+            // Clicking a different node resets to state 1 (focus)
+            if (selectedDocNode && selectedDocNode.id !== d.id) {
+                clearEntityOverlay();
+                nodeClickState = 0;
+                updateOverlaySteps(0);
+            }
+            
+            // Cycle through states
+            if (nodeClickState === 0 || (selectedDocNode && selectedDocNode.id !== d.id)) {
+                // State 0 -> 1: Focus on node
+                nodeClickState = 1;
+                selectedDocNode = d;
+                selectedCommunity = null;
+                
+                // Freeze the simulation
+                simulation.stop();
+                
+                // Show document details
+                showDocumentDetails(d.doc_id, d.file_path);
+                
+                // Show and pin tooltip for selected node
+                const tooltip = document.getElementById('tooltip');
+                const label = currentData.communityLabels ? getCommunityLabel(d.community, currentData.communityLabels) : `Community ${d.community}`;
+                tooltip.innerHTML = `
+                    <h4>${eftaId}</h4>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Community:</span> ${label}
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Degree:</span> ${d.degree.toFixed(4)}
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Betweenness:</span> ${d.betweenness.toFixed(4)}
+                    </div>
+                `;
+                tooltip.classList.add('visible');
+                tooltip.classList.add('pinned');
+                
+                // Highlight this node and its connections
+                const connectedIds = new Set();
+                data.edges.forEach(e => {
+                    if (e.source.id === d.id || e.source === d.id) connectedIds.add(typeof e.target === 'object' ? e.target.id : e.target);
+                    if (e.target.id === d.id || e.target === d.id) connectedIds.add(typeof e.source === 'object' ? e.source.id : e.source);
+                });
+                
+                nodes.attr('opacity', n => (n.id === d.id || connectedIds.has(n.id)) ? 1 : 0.2);
+                links.attr('opacity', l => 
+                    (l.source.id === d.id || l.source === d.id || l.target.id === d.id || l.target === d.id) ? 0.8 : 0.05);
+                
+                updateOverlaySteps(1, eftaId);
+                
+            } else if (nodeClickState === 1) {
+                // State 1 -> 2: Show entity overlay
+                nodeClickState = 2;
+                showEntityOverlay(d);
+                updateOverlaySteps(2, eftaId);
+                
+            } else if (nodeClickState === 2) {
+                // State 2 -> 0: Reset to normal
+                nodeClickState = 0;
+                selectedDocNode = null;
+                clearEntityOverlay();
+                closeDetailPanel();
+                
+                // Reset opacity
+                nodes.attr('opacity', 1);
+                links.attr('opacity', 0.7);
+                
+                updateOverlaySteps(0);
+            }
+        }
+        
+        // Helper function to update overlay step indicators with bold on current step
+        function updateOverlaySteps(state, eftaId = null) {
+            const stepFocus = document.getElementById('step-focus');
+            const stepArrow1 = document.getElementById('step-arrow1');
+            const stepOverlay = document.getElementById('step-overlay');
+            const stepArrow2 = document.getElementById('step-arrow2');
+            const stepReset = document.getElementById('step-reset');
+            
+            // Default color and white for active step
+            const defaultColor = '#9ca3af';
+            const activeColor = '#fafafa';
+            
+            // Reset all to normal weight and default color
+            stepFocus.style.fontWeight = 'normal';
+            stepFocus.style.color = defaultColor;
+            stepOverlay.style.fontWeight = 'normal';
+            stepOverlay.style.color = defaultColor;
+            stepReset.style.fontWeight = 'normal';
+            stepReset.style.color = defaultColor;
+            
+            // Show all arrows by default
+            stepArrow1.style.display = '';
+            stepArrow2.style.display = '';
+            
+            // Reset text content
+            stepFocus.textContent = 'Click node to focus';
+            stepOverlay.textContent = 'click again for entity overlay';
+            stepReset.textContent = 'click node again to reset';
+            
+            if (state === 0) {
+                // Ready for first click - bold "Click node to focus"
+                stepFocus.style.fontWeight = 'bold';
+                stepFocus.style.color = activeColor;
+            } else if (state === 1) {
+                // Focused, ready for entity overlay
+                stepFocus.textContent = eftaId;
+                stepOverlay.style.fontWeight = 'bold';
+                stepOverlay.style.color = activeColor;
+            } else if (state === 2) {
+                // Entity overlay shown, ready for reset
+                stepFocus.textContent = eftaId;
+                stepOverlay.textContent = 'entity overlay';
+                stepReset.style.fontWeight = 'bold';
+                stepReset.style.color = activeColor;
+            }
+        }
+        
+        async function showDocumentDetails(docId, filePath) {
+            const panel = document.getElementById('detail-panel');
+            const content = document.getElementById('detail-content');
+            
+            content.innerHTML = '<p>Loading...</p>';
+            panel.classList.add('visible');
+            const eftaId = getEftaIdGlobal(filePath);
+            document.getElementById('detail-title').textContent = eftaId;
+            
+            try {
+                // Use static data helper for chunked lookup
+                const data = await loadDocumentFromStatic(eftaId);
+                if (!data) throw new Error('Document not found');
+                
+                let html = '';
+                
+                // Summary opener at the top (not collapsible)
+                if (data.summary_opener) {
+                    html += '<div class="summary-opener">';
+                    html += `<p>${data.summary_opener}</p>`;
+                    html += '</div>';
+                }
+                
+                // Word count badge (not collapsible)
+                if (data.word_count) {
+                    html += `<div class="word-count-badge">${data.word_count.toLocaleString()} words</div>`;
+                }
+                
+                // Entities section (collapsible)
+                if (data.entities && data.entities.length > 0) {
+                    html += '<details class="detail-section" open>';
+                    html += `<summary>Entities Mentioned (${data.entities.length})</summary>`;
+                    html += '<div class="section-content">';
+                    data.entities.forEach(e => {
+                        html += `<span class="entity-tag">${e.entity_name} (${e.mention_count})</span>`;
+                    });
+                    html += '</div></details>';
+                }
+                
+                // Known relationships section (collapsible) - only show if both entities are mentioned
+                if (data.known_relationships && data.known_relationships.length > 0 && data.entities) {
+                    // Build set of mentioned entity names for fast lookup
+                    const mentionedEntities = new Set(data.entities.map(e => e.entity_name.toLowerCase()));
+                    
+                    // Filter to only relationships where both source and target are mentioned
+                    const relevantRelationships = data.known_relationships.filter(r => 
+                        mentionedEntities.has(r.source_name.toLowerCase()) && 
+                        mentionedEntities.has(r.target_name.toLowerCase())
+                    );
+                    
+                    if (relevantRelationships.length > 0) {
+                        html += '<details class="detail-section green-section" open>';
+                        html += `<summary>Known Connections (${relevantRelationships.length})</summary>`;
+                        html += '<div class="section-content"><div class="known-relationships">';
+                        relevantRelationships.forEach(r => {
+                            const relType = r.relationship_type.replace(/_/g, ' ');
+                            html += `<div class="relationship-item">
+                                <span class="rel-source">${r.source_name}</span>
+                                <span class="rel-type">${relType}</span>
+                                <span class="rel-target">${r.target_name}</span>
+                            </div>`;
+                        });
+                        html += '</div></div></details>';
+                    }
+                }
+                
+                // Top terms section (collapsible)
+                if (data.top_nouns && data.top_nouns.length > 0) {
+                    html += '<details class="detail-section" open>';
+                    html += `<summary>Top Terms (${data.top_nouns.slice(0, 8).length})</summary>`;
+                    html += '<div class="section-content">';
+                    data.top_nouns.slice(0, 8).forEach(n => {
+                        html += `<span class="entity-tag">${n.term}</span>`;
+                    });
+                    html += '</div></details>';
+                }
+                
+                content.innerHTML = html || '<p>No details available</p>';
+                
+            } catch (err) {
+                content.innerHTML = '<p>Error loading details</p>';
+            }
+        }
+        
+        function closeDetailPanel() {
+            document.getElementById('detail-panel').classList.remove('visible');
+        }
+        
+        function dragstarted(event, d) {
+            // Only restart simulation if not in frozen state (nodeClickState > 0)
+            if (!event.active && nodeClickState === 0) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active && nodeClickState === 0) simulation.alphaTarget(0);
+            // Only release fixed position if not in frozen state
+            if (nodeClickState === 0) {
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+        
+        // Entity overlay functions
+        let pinnedOverlayEntity = null;  // Track pinned entity in document overlay (global for cleanup)
+        
+        function clearEntityOverlay() {
+            if (svgGroup) {
+                svgGroup.selectAll('.entity-overlay').remove();
+                svgGroup.selectAll('.entity-link-overlay').remove();
+            }
+            entityOverlayData = null;
+            pinnedOverlayEntity = null;
+            // Remove pinned state from tooltip
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('visible');
+            tooltip.classList.remove('pinned');
+        }
+        
+        async function showEntityOverlay(docNode) {
+            clearEntityOverlay();
+            
+            const eftaId = getEftaIdGlobal(docNode.file_path);
+            // Show loading state in step-focus span
+            document.getElementById('step-focus').textContent = `Loading entities for ${eftaId}...`;
+            
+            try {
+                // Use static data helper for chunked lookup
+                const data = await loadOverlayFromStatic(eftaId);
+                
+                if (!data || !data.entities || data.entities.length === 0) {
+                    document.getElementById('step-focus').textContent = eftaId;
+                    document.getElementById('step-overlay').textContent = 'no entities found';
+                    document.getElementById('step-reset').style.fontWeight = 'bold';
+                    return;
+                }
+                
+                // Create a map of file_path to node for quick lookup
+                const nodeMap = {};
+                currentData.nodes.forEach(n => {
+                    const id = getEftaIdGlobal(n.file_path);
+                    nodeMap[id] = n;
+                    // Also map full file_path
+                    nodeMap[n.file_path] = n;
+                });
+                
+                // Compute shared_documents using the entity mentions index
+                // Filter to only include documents that exist in the current network
+                const allSharedDocs = computeSharedDocuments(data.entities, eftaId);
+                data.shared_documents = allSharedDocs.filter(doc => {
+                    const targetNode = nodeMap[doc.file_path] || nodeMap[getEftaIdGlobal(doc.file_path)];
+                    return targetNode && targetNode.id !== docNode.id;
+                });
+                
+                entityOverlayData = data;
+                
+                // Position entities in a circle around the selected document
+                const radius = 60;
+                
+                // Count shared documents per entity for sizing
+                const entitySharedCounts = {};
+                data.shared_documents.forEach(doc => {
+                    if (doc.shared_entities) {
+                        doc.shared_entities.forEach(se => {
+                            entitySharedCounts[se.entity_id] = (entitySharedCounts[se.entity_id] || 0) + 1;
+                        });
+                    }
+                });
+                
+                // Create size scale based on shared document counts
+                const maxShared = Math.max(...Object.values(entitySharedCounts), 1);
+                const entitySizeScale = d3.scaleSqrt()
+                    .domain([0, maxShared])
+                    .range([3, 8]);
+                
+                // Create color scale for individual entities
+                const entityColorScale = d3.scaleOrdinal(d3.schemeCategory10);
+                
+                const entities = data.entities.map((e, i) => {
+                    const angle = (2 * Math.PI * i) / data.entities.length - Math.PI / 2;
+                    return {
+                        ...e,
+                        x: docNode.x + radius * Math.cos(angle),
+                        y: docNode.y + radius * Math.sin(angle),
+                        shared_count: entitySharedCounts[e.entity_id] || 0,
+                        color: entityColorScale(e.entity_id)
+                    };
+                });
+                
+                // Create entity-to-document links (only to documents outside focal node's community)
+                const entityDocLinks = [];
+                const focalCommunity = docNode.community;
+                data.shared_documents.forEach(doc => {
+                    const targetNode = nodeMap[doc.file_path] || nodeMap[getEftaIdGlobal(doc.file_path)];
+                    if (targetNode && targetNode.id !== docNode.id && targetNode.community !== focalCommunity) {
+                        doc.shared_entities.forEach(se => {
+                            const entity = entities.find(e => e.entity_id === se.entity_id);
+                            if (entity) {
+                                entityDocLinks.push({
+                                    entity: entity,
+                                    target: targetNode,
+                                    entity_name: se.entity_name
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                // Draw lines from entities to shared documents
+                const linkGroup = svgGroup.append('g').attr('class', 'entity-link-overlay');
+                
+                linkGroup.selectAll('line')
+                    .data(entityDocLinks)
+                    .enter()
+                    .append('line')
+                    .attr('class', 'entity-link')
+                    .attr('x1', d => d.entity.x)
+                    .attr('y1', d => d.entity.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y)
+                    .attr('stroke', d => d.entity.color)
+                    .attr('stroke-width', 1)
+                    .attr('stroke-opacity', 0.5);
+                
+                // Draw lines from center doc to entities
+                const centerLinks = svgGroup.append('g').attr('class', 'entity-link-overlay');
+                
+                centerLinks.selectAll('line')
+                    .data(entities)
+                    .enter()
+                    .append('line')
+                    .attr('x1', docNode.x)
+                    .attr('y1', docNode.y)
+                    .attr('x2', d => d.x)
+                    .attr('y2', d => d.y)
+                    .attr('stroke', d => d.color)
+                    .attr('stroke-width', 1)
+                    .attr('stroke-opacity', 0.8);
+                
+                // Draw entity nodes
+                const entityGroup = svgGroup.append('g').attr('class', 'entity-overlay');
+                
+                const entityNodes = entityGroup.selectAll('g')
+                    .data(entities)
+                    .enter()
+                    .append('g')
+                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
+                
+                // Entity squares (for distinction from document circles)
+                // Size based on number of shared documents
+                entityNodes.append('rect')
+                    .attr('class', 'entity-node')
+                    .attr('x', d => -entitySizeScale(d.shared_count))
+                    .attr('y', d => -entitySizeScale(d.shared_count))
+                    .attr('width', d => entitySizeScale(d.shared_count) * 2)
+                    .attr('height', d => entitySizeScale(d.shared_count) * 2)
+                    .attr('fill', d => d.color)
+                    .attr('fill-opacity', 0.3)
+                    .attr('stroke', d => d.color)
+                    .attr('stroke-width', 1)
+                    .attr('stroke-opacity', 0.8)
+                    .style('cursor', 'pointer');
+                
+                // Entity labels
+                entityNodes.append('text')
+                    .attr('class', 'entity-label')
+                    .attr('dy', d => entitySizeScale(d.shared_count) + 14)
+                    .text(d => d.entity_name.length > 15 ? d.entity_name.substring(0, 15) + '...' : d.entity_name);
+                
+                // Add tooltip for entities with click-to-pin functionality
+                const tooltip = document.getElementById('tooltip');
+                
+                function showEntityOverlayTooltip(d, isPinned = false) {
+                    const sharedDocs = data.shared_documents.filter(doc => 
+                        doc.shared_entities.some(se => se.entity_id === d.entity_id)
+                    );
+                    
+                    // Helper to capitalize and handle acronyms
+                    const formatRole = str => {
+                        // First capitalize each word, then apply acronym handling
+                        const capitalized = str.replace(/_/g, ' ').split(' ')
+                            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                            .join(' ');
+                        return properCapitalize(capitalized);
+                    };
+                    
+                    let businessHtml = '';
+                    if (d.businesses && d.businesses.length > 0) {
+                        const maxToShow = 3;
+                        const visibleBiz = d.businesses.slice(0, maxToShow);
+                        const additionalBiz = d.businesses.slice(maxToShow);
+                        const expanderId = `entity-overlay-biz-${d.entity_id}`;
+                        
+                        const formatBizItem = b => 
+                            `<div style="display: flex; align-items: center; justify-content: center; margin: 4px 0; gap: 6px;">
+                                <span class="role-tag">${formatRole(b.role)}</span>
+                                <span class="entity-tag">${b.name}</span>
+                            </div>`;
+                        
+                        const bizList = visibleBiz.map(formatBizItem).join('');
+                        
+                        const moreHtml = additionalBiz.length > 0 
+                            ? `<div class="overlay-biz-toggle" data-target="${expanderId}" data-count="${additionalBiz.length}" style="display: inline-block; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 4px; padding: 4px 8px; color: #a855f7; cursor: pointer; margin-top: 8px; font-style: normal; font-weight: 500;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${additionalBiz.length} more associations</div>
+                               <div id="${expanderId}" class="overlay-biz-expanded" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                                   ${additionalBiz.map(formatBizItem).join('')}
+                               </div>`
+                            : '';
+                        
+                        businessHtml = `
+                            <div class="tooltip-row" style="margin-top: 8px;">
+                                <span class="tooltip-label">Associations (${d.businesses.length}):</span>
+                            </div>
+                            <div style="margin-top: 4px; display: flex; flex-direction: column; align-items: center;">${bizList}${moreHtml}</div>
+                        `;
+                    }
+                    
+                    // Format entity type
+                    const formatType = str => {
+                        const capitalized = str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
+                        return properCapitalize(capitalized);
+                    };
+                    
+                    tooltip.innerHTML = `
+                        <h4>${d.entity_name}</h4>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Type:</span> ${formatType(d.entity_type)}
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Mentions Here:</span> ${d.mention_count}
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Shared Docs:</span> ${sharedDocs.length}
+                        </div>
+                        ${businessHtml}
+                    `;
+                    
+                    // Add click handler for expandable associations
+                    const toggle = tooltip.querySelector('.overlay-biz-toggle');
+                    if (toggle) {
+                        toggle.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const targetId = toggle.getAttribute('data-target');
+                            const count = toggle.getAttribute('data-count');
+                            const expanded = document.getElementById(targetId);
+                            const icon = toggle.querySelector('.toggle-icon');
+                            if (expanded) {
+                                const isHidden = expanded.style.display === 'none';
+                                expanded.style.display = isHidden ? 'block' : 'none';
+                                if (icon) {
+                                    icon.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+                                }
+                                toggle.innerHTML = isHidden 
+                                    ? '<span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transform: rotate(90deg); transition: transform 0.2s;">▶</span>Hide additional associations'
+                                    : `<span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${count} more associations`;
+                            }
+                        });
+                    }
+                    
+                    tooltip.classList.add('visible');
+                    if (isPinned) {
+                        tooltip.classList.add('pinned');
+                    }
+                    
+                    // Highlight only the document nodes connected to this entity (outside focal community)
+                    const connectedDocPaths = new Set(sharedDocs.map(doc => doc.file_path));
+                    connectedDocPaths.add(docNode.file_path); // Always include the focal document
+                    const focalCommunity = docNode.community;
+                    
+                    currentData.nodeElements.attr('opacity', n => {
+                        if (n.id === docNode.id) return 1;
+                        // Only highlight nodes outside the focal community
+                        if (n.community === focalCommunity) return 0.1;
+                        const nEftaId = getEftaIdGlobal(n.file_path);
+                        if (connectedDocPaths.has(n.file_path) || connectedDocPaths.has(nEftaId)) return 0.9;
+                        return 0.1;
+                    });
+                    
+                    // Highlight the entity-to-doc links for this entity only
+                    linkGroup.selectAll('line')
+                        .attr('stroke-opacity', link => link.entity.entity_id === d.entity_id ? 0.8 : 0.1);
+                    
+                    // Highlight this entity node
+                    entityNodes.selectAll('rect')
+                        .attr('fill-opacity', e => e.entity_id === d.entity_id ? 0.6 : 0.2)
+                        .attr('stroke-opacity', e => e.entity_id === d.entity_id ? 1 : 0.4);
+                }
+                
+                function resetEntityOverlayHighlighting() {
+                    // Reset to default entity overlay state - only focal node highlighted, all others dimmed
+                    currentData.nodeElements.attr('opacity', n => {
+                        if (n.id === docNode.id) return 1;
+                        return 0.15;
+                    });
+                    
+                    // Reset all entity-doc links
+                    linkGroup.selectAll('line').attr('stroke-opacity', 0.5);
+                    
+                    // Reset entity node styling
+                    entityNodes.selectAll('rect')
+                        .attr('fill-opacity', 0.3)
+                        .attr('stroke-opacity', 0.8);
+                    
+                    tooltip.classList.remove('visible');
+                    tooltip.classList.remove('pinned');
+                }
+                
+                // Stop clicks inside tooltip from propagating
+                tooltip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                
+                entityNodes.on('mouseover', (event, d) => {
+                    if (!pinnedOverlayEntity) {
+                        showEntityOverlayTooltip(d);
+                    }
+                });
+                
+                entityNodes.on('mouseout', () => {
+                    if (!pinnedOverlayEntity) {
+                        resetEntityOverlayHighlighting();
+                    }
+                });
+                
+                entityNodes.on('click', (event, d) => {
+                    event.stopPropagation();
+                    if (pinnedOverlayEntity === d.entity_id) {
+                        // Clicking same entity unpins it
+                        pinnedOverlayEntity = null;
+                        tooltip.classList.remove('pinned');
+                        resetEntityOverlayHighlighting();
+                    } else {
+                        // Pin this entity
+                        pinnedOverlayEntity = d.entity_id;
+                        showEntityOverlayTooltip(d, true);
+                    }
+                });
+                
+                // Click on SVG background to unpin entity (but don't interfere with document node clicks)
+                // This is handled in the main SVG click handler
+                
+                // Highlight shared documents
+                const sharedDocPaths = new Set(data.shared_documents.map(d => d.file_path));
+                currentData.nodeElements.attr('opacity', n => {
+                    if (n.id === docNode.id) return 1;
+                    if (sharedDocPaths.has(n.file_path)) return 0.9;
+                    return 0.15;
+                });
+                
+                currentData.linkElements.attr('opacity', 0.05);
+                
+                const sharedCount = data.shared_documents.length;
+                const entityCount = data.entities.length;
+                document.getElementById('step-focus').textContent = eftaId;
+                document.getElementById('step-overlay').textContent = 
+                    `${entityCount} entities, ${sharedCount} docs`;
+                document.getElementById('step-reset').style.fontWeight = 'bold';
+                
+            } catch (err) {
+                console.error('Error loading entity overlay:', err);
+                document.getElementById('step-focus').textContent = eftaId;
+                document.getElementById('step-overlay').textContent = 'error loading entities';
+                document.getElementById('step-reset').style.fontWeight = 'bold';
+            }
+        }
+        
+    </script>
+</body>
+</html>
