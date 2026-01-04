@@ -318,6 +318,7 @@
         
         #community-list {
             margin-top: 20px;
+            display: none;
         }
         
         #community-list h3 {
@@ -425,7 +426,7 @@
         
         .tooltip.entity-view {
             left: calc(300px + 20px);
-            top: 84px;
+            top: 40px;
             transform: none;
         }
         
@@ -499,7 +500,7 @@
         #detail-panel {
             position: absolute;
             left: 20px;
-            top: 20px;
+            top: 40px;
             width: 340px;
             background: #111116;
             border: 1px solid rgba(255,255,255,0.08);
@@ -755,7 +756,7 @@
         
         .overlay-info {
             position: fixed;
-            top: 72px;
+            top: 12px;
             left: calc(300px + (100vw - 300px) / 2);
             transform: translateX(-50%);
             font-size: 12px;
@@ -814,7 +815,7 @@
         
         .legend {
             position: absolute;
-            top: 20px;
+            top: 40px;
             right: 20px;
             background: #111116;
             border: 1px solid rgba(255,255,255,0.08);
@@ -1000,11 +1001,11 @@
         <div id="graph-container">
             <div class="loading" id="loading">Loading network data...</div>
             <svg id="graph"></svg>
-            <div class="search-container" id="search-container" style="position: fixed; top: 16px; left: calc(300px + (100vw - 300px) / 2); transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; align-items: center;">
+            <div class="search-container" id="search-container" style="position: fixed; top: 40px; left: calc(300px + (100vw - 300px) / 2); transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; align-items: center;">
                 <input type="text" id="search-input" placeholder="Search EFTA ID, entity, or term..." style="width: 320px; padding: 10px 16px; background: rgba(24, 24, 27, 0.95); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fafafa; font-size: 13px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: center;">
                 <div id="search-results" style="width: 320px; max-height: 200px; overflow-y: auto; margin-top: 4px; background: rgba(24, 24, 27, 0.95); border-radius: 8px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
             </div>
-            <div class="overlay-info" id="overlay-info"><span id="step-focus" style="font-weight: bold; color: #fafafa;">Click node to focus</span><span id="step-arrow1"> → </span><span id="step-overlay">click again for entity overlay</span><span id="step-arrow2"> → </span><span id="step-reset">click node again to reset</span></div>
+            <div class="overlay-info" id="overlay-info"><span id="step-focus" style="font-weight: bold; color: #fafafa;">Click node to focus</span><span id="step-arrow1"> → </span><span id="step-overlay">click again for entity overlay</span><span id="step-arrow2"> → </span><span id="step-reset">click node or away to reset</span></div>
             <div class="tooltip" id="tooltip"></div>
             <button class="zoom-fit-btn" id="zoom-fit-btn">⛶</button>
             <div id="detail-panel">
@@ -2567,7 +2568,7 @@
             // Draw nodes
             const sizeAttr = document.getElementById('node-size').value;
             const sizeScale = d3.scaleSqrt()
-                .domain([0, d3.max(data.nodes, d => d[sizeAttr] || 1)])
+                .domain([0, d3.max(data.nodes, d => d[sizeAttr]) || 1])
                 .range([1, 5]);
             
             const nodes = g.append('g')
@@ -2576,7 +2577,7 @@
                 .data(data.nodes)
                 .enter()
                 .append('circle')
-                .attr('r', d => sizeScale(d[sizeAttr] || 1))
+                .attr('r', d => sizeScale(d[sizeAttr] || 0))
                 .attr('fill', d => communityColors(d.community))
                 .attr('stroke', 'none')
                 .attr('cursor', 'pointer')
@@ -2642,9 +2643,9 @@
                 handleNodeClick(d, nodes, links, data);
             });
             
-            // Click on background to exit overlay state
+            // Click on background to exit focus or overlay state
             svg.on('click', () => {
-                if (nodeClickState === 2) {
+                if (nodeClickState >= 1) {
                     nodeClickState = 0;
                     selectedDocNode = null;
                     clearEntityOverlay();
@@ -2754,13 +2755,13 @@
             } else if (currentData && currentData.nodeElements) {
                 // Document network: circles only
                 const sizeScale = d3.scaleSqrt()
-                    .domain([0, d3.max(currentData.nodes, d => d[sizeAttr] || 1)])
+                    .domain([0, d3.max(currentData.nodes, d => d[sizeAttr]) || 1])
                     .range([1, 5]);
                 
                 currentData.nodeElements
                     .transition()
                     .duration(500)
-                    .attr('r', d => sizeScale(d[sizeAttr] || 1));
+                    .attr('r', d => sizeScale(d[sizeAttr] || 0));
             }
         }
         
@@ -2895,7 +2896,7 @@
             // Reset text content
             stepFocus.textContent = 'Click node to focus';
             stepOverlay.textContent = 'click again for entity overlay';
-            stepReset.textContent = 'click node again to reset';
+            stepReset.textContent = 'click node or away to reset';
             
             if (state === 0) {
                 // Ready for first click - bold "Click node to focus"
