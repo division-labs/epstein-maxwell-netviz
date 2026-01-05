@@ -398,7 +398,7 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.4);
             text-align: center;
             width: 320px;
-            max-height: calc(100vh - 180px);
+            max-height: calc(100vh - 220px);
             overflow-y: scroll;
         }
         
@@ -3210,9 +3210,22 @@
                     
                     let businessHtml = '';
                     if (d.businesses && d.businesses.length > 0) {
-                        const maxToShow = 3;
-                        const visibleBiz = d.businesses.slice(0, maxToShow);
-                        const additionalBiz = d.businesses.slice(maxToShow);
+                        // Sort by role importance - more significant roles first
+                        const roleImportance = {
+                            'owner': 1, 'founder': 2, 'co-founder': 3, 'ceo': 4, 'president': 5,
+                            'chairman': 6, 'director': 7, 'managing_director': 8, 'partner': 9,
+                            'executive': 10, 'officer': 11, 'trustee': 12, 'board_member': 13,
+                            'advisor': 14, 'consultant': 15, 'employee': 16, 'member': 17
+                        };
+                        const sortedBiz = [...d.businesses].sort((a, b) => {
+                            const aRank = roleImportance[a.role.toLowerCase()] || 50;
+                            const bRank = roleImportance[b.role.toLowerCase()] || 50;
+                            return aRank - bRank;
+                        });
+                        
+                        const maxToShow = 1;
+                        const visibleBiz = sortedBiz.slice(0, maxToShow);
+                        const additionalBiz = sortedBiz.slice(maxToShow);
                         const expanderId = `entity-overlay-biz-${d.entity_id}`;
                         
                         const formatBizItem = b => 
@@ -3224,10 +3237,11 @@
                         const bizList = visibleBiz.map(formatBizItem).join('');
                         
                         const moreHtml = additionalBiz.length > 0 
-                            ? `<div class="overlay-biz-toggle" data-target="${expanderId}" data-count="${additionalBiz.length}" style="display: inline-block; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 4px; padding: 4px 8px; color: #a855f7; cursor: pointer; margin-top: 8px; font-style: normal; font-weight: 500;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${additionalBiz.length} more associations</div>
-                               <div id="${expanderId}" class="overlay-biz-expanded" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                            ? `<div class="overlay-biz-toggle" data-target="${expanderId}" data-count="${additionalBiz.length}" style="display: inline-block; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 4px; padding: 4px 8px; color: #a855f7; cursor: pointer; margin-top: 8px; font-style: normal; font-weight: 500;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${additionalBiz.length} more</div>
+                               <div id="${expanderId}" class="overlay-biz-expanded" style="display: none; margin-top: 6px; padding-top: 6px; padding-bottom: 12px; padding-right: 8px; border-top: 1px dashed rgba(255,255,255,0.1); max-height: 150px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;">
                                    ${additionalBiz.map(formatBizItem).join('')}
-                               </div>`
+                               </div>
+                               <style>#${expanderId}::-webkit-scrollbar { width: 8px; } #${expanderId}::-webkit-scrollbar-track { background: transparent; } #${expanderId}::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; } #${expanderId}::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }</style>`
                             : '';
                         
                         businessHtml = `
