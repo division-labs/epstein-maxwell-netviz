@@ -52,7 +52,7 @@ The visualization offers two complementary views:
 
 - **Force-directed layout** with zoom, pan, and drag interactions
 - **Community detection** using the Louvain algorithm with automatic coloring
-- **Node sizing** based on degree centrality (connection count)
+- **Node sizing** based on betweenness centrality
 - **Real-time filtering** by similarity threshold
 
 ### Persistent Homology Integration
