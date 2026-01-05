@@ -25,7 +25,19 @@ An interactive visualization of document similarity and entity relationships wit
 
 ## Overview
 
-This visualization presents a force-directed graph of **471 legal documents** from the EFTA (Epstein Files Text Archive) corpus, with edges representing semantic similarity computed via TF-IDF cosine similarity on noun term-document matrices. The network reveals document clusters (communities), cross-cluster bridges, and entity co-occurrence patterns that illuminate the structure of this complex legal corpus.
+This visualization presents a force-directed graph of **471 semantically connected legal documents** from the EFTA (Epstein Files Text Archive) corpus, with edges representing semantic similarity computed via TF-IDF cosine similarity on noun term-document matrices. The network reveals document clusters (communities), cross-cluster bridges, and entity co-occurrence patterns that illuminate the structure of this complex legal corpus.
+
+### Document Selection
+
+The 471 documents shown here are drawn from a **full corpus of 15,116 documents** spanning court filings, depositions, FBI reports, correspondence, and other legal materials. The filtering pipeline works as follows:
+
+1. **Text Extraction**: Of the 15,116 total files, 14,680 are PDFs processed through OCR. Video files (419), spreadsheets, and other non-text formats are excluded from text analysis.
+
+2. **Term-Document Matrix**: Documents are filtered to those with sufficient extractable noun terms for meaningful TF-IDF analysis. Scanned images with poor OCR, handwritten documents, and very short forms are excluded at this stage.
+
+3. **Similarity Network**: Only documents with **at least one cosine similarity edge ≥ 0.20** to another document are included in the visualization. Documents with highly unique vocabulary—such as asset inventories, diamond grading reports, or technical exhibits—may have no meaningful textual overlap with other documents and thus become isolated nodes excluded from the network.
+
+The result is a network of documents that share meaningful semantic content, enabling researchers to trace thematic connections across the corpus. Documents excluded from this visualization remain accessible in the full EFTA archive for individual review.
 
 The visualization offers two complementary views:
 
@@ -197,15 +209,18 @@ The default threshold is set to the **H₁ optimal** (currently 0.75), as this r
 
 ## Network Statistics
 
-| Metric             | Document Network | Entity Network |
-| ------------------ | ---------------- | -------------- |
-| Nodes              | 471 documents    | 142 entities   |
-| Edges (at optimal) | 547              | 224            |
-| Communities        | 57               | —             |
-| Modularity         | 0.74             | —             |
-| Threshold Range    | 0.20 – 0.95     | N/A            |
-| H₀ Optimal        | 0.20             | —             |
-| H₁ Optimal        | 0.75             | —             |
+| Metric             | Full Network (0.20) | At H₁ Optimal (0.75) | Entity Network |
+| ------------------ | ------------------- | -------------------- | -------------- |
+| Nodes              | 471 documents       | 198 documents        | 142 entities   |
+| Edges              | 6,366               | 547                  | 224            |
+| Communities        | 27                  | 57                   | —             |
+| Modularity         | 0.73                | 0.74                 | —             |
+
+| Threshold Settings |                     |
+| ------------------ | ------------------- |
+| Range              | 0.20 – 0.95        |
+| H₀ Optimal        | 0.20                |
+| H₁ Optimal        | 0.75 (default)      |
 
 ---
 
