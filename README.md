@@ -1,6 +1,6 @@
 # Epstein-Maxwell Document Similarity Network
 
-An interactive visualization of document similarity and entity relationships within the Epstein-Maxwell Files corpus. This tool enables researchers, journalists, and legal professionals to explore topological structures in legal document collections using techniques from computational topology and network science.
+An interactive visualization of document similarity and entity relationships within the Epstein-Maxwell Files corpus. This tool enables researchers, journalists, and legal professionals to explore topological structures in legal document collections using techniques from computational topology and network science. See: https://division-labs.github.io/epstein-maxwell-netviz/.
 
 ![Document Network Visualization](https://img.shields.io/badge/D3.js-v7-orange) ![License](https://img.shields.io/badge/License-MIT-blue) ![Static Site](https://img.shields.io/badge/Hosting-GitHub%20Pages-green)
 
