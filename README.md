@@ -85,16 +85,12 @@ Document similarity is computed using a standard information retrieval pipeline:
 1. **Term-Document Matrix (TDM)**: Noun terms extracted via spaCy NER are organized into a sparse matrix where rows represent terms and columns represent documents.
 2. **TF-IDF Weighting**: Raw term counts are transformed using Term Frequency–Inverse Document Frequency weighting to emphasize discriminative terms:
 
-   $$
-   \text{tf-idf}(t,d) = \text{tf}(t,d) \times \log\frac{N}{\text{df}(t)}
-   $$
+   $$\text{tf-idf}(t,d) = \text{tf}(t,d) \times \log\frac{N}{\text{df}(t)}$$
 
    where $\text{tf}(t,d)$ is the term frequency in document $d$, $N$ is the total number of documents, and $\text{df}(t)$ is the document frequency of term $t$.
 3. **Cosine Similarity**: Pairwise document similarity is computed as the cosine of the angle between TF-IDF vectors:
 
-   $$
-   \text{sim}(d_i, d_j) = \frac{\mathbf{v}_i \cdot \mathbf{v}_j}{\|\mathbf{v}_i\| \|\mathbf{v}_j\|}
-   $$
+   $$\text{sim}(d_i, d_j) = \frac{\mathbf{v}_i \cdot \mathbf{v}_j}{\|\mathbf{v}_i\| \|\mathbf{v}_j\|}$$
 
 ### Persistent Homology
 
