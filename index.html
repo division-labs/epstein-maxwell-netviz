@@ -824,6 +824,7 @@
             width: 300px;
             max-height: calc(100vh - 60px);
             overflow-y: scroll;
+            z-index: 101;
         }
         
         .legend::-webkit-scrollbar {
@@ -1046,6 +1047,7 @@
         let selectedCommunity = null;
         let availableThresholds = [];
         let optimalThreshold = 0.35;
+        let defaultThreshold = 0.50;
         let thresholdReason = '';
         let h0Threshold = null;
         let h1Threshold = null;
@@ -1157,15 +1159,15 @@
             // Load temporal periods
             await loadTemporalPeriods();
             
-            // Set slider to optimal threshold
+            // Set slider to default threshold
             const slider = document.getElementById('threshold-slider');
-            slider.value = optimalThreshold;
-            document.getElementById('threshold-value').textContent = optimalThreshold.toFixed(2);
-            updateThresholdInfo(optimalThreshold);
-            updateHomologyTags(optimalThreshold);
+            slider.value = defaultThreshold;
+            document.getElementById('threshold-value').textContent = defaultThreshold.toFixed(2);
+            updateThresholdInfo(defaultThreshold);
+            updateHomologyTags(defaultThreshold);
             
-            // Then load network at optimal threshold
-            loadNetwork(optimalThreshold);
+            // Then load network at default threshold
+            loadNetwork(defaultThreshold);
             
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
@@ -1181,8 +1183,12 @@
             
             document.getElementById('node-size').addEventListener('change', () => {
                 if (currentData) updateNodeSizes();
-                // Update legend if in entity view
-                if (viewMode === 'entity') updateEntityLegend();
+                // Update legend based on current view mode
+                if (viewMode === 'entity') {
+                    updateEntityLegend();
+                } else {
+                    updateDocumentSizeLegend();
+                }
             });
             
             // Temporal filter change handler
@@ -2137,6 +2143,32 @@
             const sizeLabel = sizeLabels[sizeAttr] || 'Size';
             
             // Size legend - consistent with document network (purple stroke, no fill)
+            document.getElementById('size-legend-items').innerHTML = `
+                <div style="font-size: 10px; color: #a1a1aa; margin-bottom: 6px;">${sizeLabel}</div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 2px; height: 2px;"></div>
+                    <span>Low</span>
+                </div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 6px; height: 6px;"></div>
+                    <span>Medium</span>
+                </div>
+                <div class="size-legend-item">
+                    <div class="size-circle" style="width: 10px; height: 10px;"></div>
+                    <span>High</span>
+                </div>
+            `;
+        }
+        
+        function updateDocumentSizeLegend() {
+            const sizeAttr = document.getElementById('node-size').value;
+            const sizeLabels = {
+                'degree': 'Degree',
+                'betweenness': 'Betweenness',
+                'pagerank': 'PageRank',
+                'eigenvector': 'Eigenvector'
+            };
+            const sizeLabel = sizeLabels[sizeAttr] || 'Size';
             document.getElementById('size-legend-items').innerHTML = `
                 <div style="font-size: 10px; color: #a1a1aa; margin-bottom: 6px;">${sizeLabel}</div>
                 <div class="size-legend-item">
@@ -3237,18 +3269,15 @@
                         const bizList = visibleBiz.map(formatBizItem).join('');
                         
                         const moreHtml = additionalBiz.length > 0 
-                            ? `<div class="overlay-biz-toggle" data-target="${expanderId}" data-count="${additionalBiz.length}" style="display: inline-block; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 4px; padding: 4px 8px; color: #a855f7; cursor: pointer; margin-top: 8px; font-style: normal; font-weight: 500;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${additionalBiz.length} more</div>
-                               <div id="${expanderId}" class="overlay-biz-expanded" style="display: none; margin-top: 6px; padding-top: 6px; padding-bottom: 12px; padding-right: 8px; border-top: 1px dashed rgba(255,255,255,0.1); max-height: 150px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;">
+                            ? `<div class="overlay-biz-toggle" data-target="${expanderId}" data-count="${additionalBiz.length}" style="display: inline-block; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 4px; padding: 4px 8px; color: #a855f7; cursor: pointer; margin-top: 8px; font-style: normal; font-weight: 500;"><span class="toggle-icon" style="display: inline-block; font-size: 8px; margin-right: 5px; transition: transform 0.2s;">▶</span>${additionalBiz.length} more associations</div>
+                               <div id="${expanderId}" class="overlay-biz-expanded" style="display: none; margin-top: 6px; padding-top: 6px; padding-bottom: 12px; padding-right: 8px; max-height: 150px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;">
                                    ${additionalBiz.map(formatBizItem).join('')}
                                </div>
                                <style>#${expanderId}::-webkit-scrollbar { width: 8px; } #${expanderId}::-webkit-scrollbar-track { background: transparent; } #${expanderId}::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; } #${expanderId}::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }</style>`
                             : '';
                         
                         businessHtml = `
-                            <div class="tooltip-row" style="margin-top: 8px;">
-                                <span class="tooltip-label">Associations (${d.businesses.length}):</span>
-                            </div>
-                            <div style="margin-top: 4px; display: flex; flex-direction: column; align-items: center;">${bizList}${moreHtml}</div>
+                            <div style="margin-top: 8px; display: flex; flex-direction: column; align-items: center;">${bizList}${moreHtml}</div>
                         `;
                     }
                     
@@ -3260,9 +3289,6 @@
                     
                     tooltip.innerHTML = `
                         <h4>${d.entity_name}</h4>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Type:</span> ${formatType(d.entity_type)}
-                        </div>
                         <div class="tooltip-row">
                             <span class="tooltip-label">Mentions Here:</span> ${d.mention_count}
                         </div>
