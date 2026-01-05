@@ -162,6 +162,7 @@ The default threshold is set to the **H₁ optimal** (currently 0.75), as this r
 | `extract_pdfs.py`                      | OCR and text extraction from PDF documents    |
 | `load_extracted_text.py`               | Load extracted text into PostgreSQL           |
 | `build_noun_tdm_postgres.py`           | Build noun term-document matrix               |
+| `build_verb_tdm_postgres.py`           | Build verb term-document matrix               |
 | `build_document_similarity_network.py` | Compute similarities and persistent homology  |
 | `build_entity_network.py`              | Extract and canonicalize entity relationships |
 | `export_static_data.py`                | Generate static JSON files for GitHub Pages   |
