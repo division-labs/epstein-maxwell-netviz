@@ -123,7 +123,7 @@ The visualization uses persistent homology to automatically recommend similarity
 - **H₀ Threshold** (green marker): The threshold with the largest persistence gap in connected components, indicating the most stable clustering structure.
 - **H₁ Threshold** (red marker): The threshold where the most significant 1-dimensional cycle dies, indicating when the network transitions from containing loops to being more tree-like.
 
-The default threshold is set to the **H₁ optimal** (currently 0.75), as this represents the point where significant topological structure stabilizes.
+The default threshold is set between the **H₀ optimal** and **H₁ optimal** (currently 0.50), as this represents a balance point in the topological structure of significant H₀ and H₁ features.
 
 ---
 
