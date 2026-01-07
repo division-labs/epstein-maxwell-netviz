@@ -25,7 +25,7 @@ An interactive visualization of document similarity and entity relationships wit
 
 ## Overview
 
-This visualization presents a force-directed graph of **471 semantically connected legal documents** from the EFTA (Epstein Files Text Archive) corpus, with edges representing semantic similarity computed via TF-IDF cosine similarity on noun term-document matrices. The network reveals document clusters (communities), cross-cluster bridges, and entity co-occurrence patterns that illuminate the structure of this complex legal corpus.
+This visualization presents a force-directed graph of **471 semantically connected legal documents** from the EFTA (Epstein Files Transparency Act) corpus, with edges representing semantic similarity computed via TF-IDF cosine similarity on noun term-document matrices. The network reveals document clusters (communities), cross-cluster bridges, and entity co-occurrence patterns that illuminate the structure of this complex legal corpus.
 
 ### Document Selection
 
@@ -321,6 +321,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Acknowledgments
 
-This visualization is part of the broader [Epstein-Maxwell Files](https://github.com/yourusername/epstein-maxwell-files) computational analysis project. The underlying document corpus consists of legal documents released through the EFTA (Epstein Files Text Archive) collection.
+This visualization is part of the broader [Epstein-Maxwell Files](https://github.com/yourusername/epstein-maxwell-files) computational analysis project. The underlying document corpus consists of legal documents released through the EFTA (Epstein Files Transparency Act) collection.
 
 For questions or contributions, please open an issue on GitHub.
